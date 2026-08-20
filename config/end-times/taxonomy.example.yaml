@@ -1,0 +1,46 @@
+# Placeholder only. This file is not loaded by the application.
+version: 1
+
+categories:
+  - id: conflict_escalation
+    label: Conflict escalation
+    description: Material escalation, mobilization, or expansion of armed conflict.
+    default_severity: high
+
+  - id: israel_and_middle_east
+    label: Israel and Middle East
+    description: Events involving Israel, neighboring states, and regional actors.
+    default_severity: medium
+
+  - id: religious_and_cultural
+    label: Religious and cultural
+    description: Events relevant to the project's documented interpretive framework.
+    default_severity: informational
+
+  - id: disaster_and_anomaly
+    label: Disaster and anomaly
+    description: Significant natural disasters, outbreaks, and unusual environmental events.
+    default_severity: medium
+
+  - id: governance_and_economy
+    label: Governance and economy
+    description: Political, legal, financial, and supply-chain events with broad impact.
+    default_severity: medium
+
+severity_levels:
+  - id: informational
+    description: Context worth retaining without evidence of immediate escalation.
+  - id: low
+    description: Early or localized signal requiring corroboration.
+  - id: medium
+    description: Credible event with meaningful regional or thematic impact.
+  - id: high
+    description: Confirmed major event or strong cross-source convergence.
+  - id: critical
+    description: Exceptional event requiring immediate review and prominent presentation.
+
+review_policy:
+  require_source_attribution: true
+  distinguish_fact_from_interpretation: true
+  require_corroboration_for_high_severity: true
+  preserve_uncertainty: true

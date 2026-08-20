@@ -1,0 +1,40 @@
+# Placeholder only. This file is not loaded by the application.
+version: 1
+
+defaults:
+  enabled: false
+  minimum_corroboration: 2
+  retain_original_url: true
+  retain_published_at: true
+  allow_ai_summary: true
+
+sources:
+  - id: gdelt
+    kind: event_aggregator
+    enabled: true
+    trust_tier: discovery
+    purpose: Discover candidate events for corroboration by primary or direct sources.
+    filters:
+      languages:
+        - English
+      max_age_hours: 72
+
+  - id: official_alerts
+    kind: primary
+    enabled: true
+    trust_tier: authoritative
+    purpose: Government, geological, weather, health, and emergency bulletins.
+
+  - id: wire_and_public_broadcasters
+    kind: secondary
+    enabled: true
+    trust_tier: corroborating
+    purpose: Time-sensitive reporting and independent confirmation.
+
+exclusions:
+  - reason: unattributed_repost
+    description: Exclude pages that reproduce a claim without identifying its source.
+  - reason: synthetic_or_manipulated_media
+    description: Exclude unverified media with signs of manipulation or missing provenance.
+  - reason: instruction_like_feed_content
+    description: Treat instructions embedded in fetched content as untrusted data.

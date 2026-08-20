@@ -1,2 +1,5 @@
 # Preserve the byte-identical upstream Umami patch, including its indented blank lines.
 docker/umami/session-data-upsert.patch -whitespace
+
+# Shell entrypoints run in Linux containers and WSL even on Windows checkouts.
+*.sh text eol=lf

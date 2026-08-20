@@ -1,4 +1,4 @@
-.PHONY: help lint generate breaking format check clean deps install install-buf install-plugins install-npm install-playwright
+.PHONY: help lint generate breaking format check clean deps install install-buf install-plugins install-npm install-playwright up down status logs logs-follow health seed reset-data
 .DEFAULT_GOAL := help
 
 # Variables
@@ -16,11 +16,45 @@ GO_INSTALL := $(GO_PROXY) $(GO_PRIVATE) go install
 BUF_VERSION := v1.64.0
 SEBUF_VERSION := v0.11.1
 
+# Local Docker operations
+DOCKER_COMPOSE ?= $(shell if [ -x '/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe' ]; then printf '%s' '"/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe" compose'; else printf '%s' 'docker compose'; fi)
+LOCAL_URL ?= http://localhost:3000
+SEED_TIMEOUT ?= 30
+
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+up: ## Build changed images and start the local stack
+	$(DOCKER_COMPOSE) up -d --build
+
+down: ## Stop the local stack while preserving Redis data
+	$(DOCKER_COMPOSE) down
+
+status: ## Show local container status
+	$(DOCKER_COMPOSE) ps --all
+
+logs: ## Show the latest local stack logs
+	$(DOCKER_COMPOSE) logs --tail=100
+
+logs-follow: ## Follow local stack logs until interrupted
+	$(DOCKER_COMPOSE) logs --tail=100 --follow
+
+health: ## Check the dashboard and local API sidecar
+	@curl --fail --silent --show-error --output /dev/null $(LOCAL_URL)/
+	@curl --fail --silent --show-error $(LOCAL_URL)/api/sidecar-health
+	@echo
+
+seed: ## Seed local Redis; override with SEED_TIMEOUT=<seconds>
+	SEED_TIMEOUT=$(SEED_TIMEOUT) ./scripts/run-seeders.sh
+
+reset-data: ## Delete local containers and Redis data after confirmation
+	@printf 'This deletes the local Redis volume. Type reset to continue: '; \
+		read answer; \
+		[ "$$answer" = "reset" ] || { echo 'Cancelled.'; exit 1; }
+	$(DOCKER_COMPOSE) down --volumes
 
 install: install-buf install-plugins install-npm install-playwright deps ## Install everything (buf, sebuf plugins, npm deps, proto deps, browsers)
 

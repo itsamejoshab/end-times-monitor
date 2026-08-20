@@ -23,10 +23,6 @@ COPY . .
 # the clean image context before handlers import or bundle them.
 RUN node scripts/generate-inventory-facts.mjs
 
-# Compile TypeScript API handlers → self-contained ESM bundles
-# Output is api/**/*.js alongside the source .ts files
-RUN node docker/build-handlers.mjs
-
 # public/pro/ is a build product, not committed bytes (#6898), so this image has
 # to build it. Skipping it does NOT 404: this image installs docker/nginx.conf,
 # whose `location /` ends in `try_files $uri $uri/ /dashboard.html`,
@@ -44,6 +40,12 @@ RUN npm run build:crawlable-corpus && npm run build:sitemap && npx tsc && npx vi
 # docker/nginx.conf's SPA fallback would serve the dashboard shell at 200 for a
 # missing /pro rather than failing visibly.
 RUN test -s dist/pro/index.html && test -s dist/pro/welcome.html
+
+# Compile TypeScript API handlers → self-contained ESM bundles only after
+# attribution-backed static content is built. The compiler writes api/**/*.js
+# beside source .ts files; generating them earlier makes the attribution scan
+# count build artifacts as source references and rejects the manifest.
+RUN node docker/build-handlers.mjs
 
 # ── Stage 2: Runtime dependencies ───────────────────────────────────────────
 FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS runtime-deps
@@ -95,7 +97,10 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/worldmonitor.conf
 COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY docker/render-nginx-realip.mjs /app/render-nginx-realip.mjs
 COPY docker/validate-session-secret.mjs /app/validate-session-secret.mjs
-RUN chmod +x /app/entrypoint.sh
+# Windows checkouts may materialize shell scripts with CRLF because the
+# repository does not globally pin shell files to LF. Normalize the runtime
+# entrypoint inside the Linux image before executing it.
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Ensure writable dirs for non-root
 RUN chown -R appuser:appgroup /app /tmp/nginx-client-body /tmp/nginx-proxy \
