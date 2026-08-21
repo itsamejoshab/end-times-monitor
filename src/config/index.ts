@@ -60,6 +60,7 @@ export {
   VARIANT_PANEL_OVERRIDES,
   getEffectivePanelConfig,
   getInitialPanelSettingsForVariant,
+  sanitizeRetiredPanels,
   isPanelInVariantDefaults,
   isPanelEntitled,
   enforceFreePanelLimit,

@@ -660,7 +660,7 @@ canvas,
 .logo {
   font-weight: bold;
   font-size: calc(14px * var(--wm-panel-effective-scale, 1));
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   color: var(--accent);
 }
 

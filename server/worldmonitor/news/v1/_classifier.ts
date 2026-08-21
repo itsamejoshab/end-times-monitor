@@ -77,6 +77,15 @@ const HIGH_KEYWORDS: KeywordMap = {
   'tsunami': 'disaster',
   'hurricane': 'disaster',
   'typhoon': 'disaster',
+  'persecution': 'conflict',
+  'church attack': 'conflict',
+  'religious freedom': 'diplomatic',
+  'religious liberty': 'diplomatic',
+  'famine': 'disaster',
+  'food shortage': 'disaster',
+  'cbdc': 'economic',
+  'digital identity': 'tech',
+  'social credit': 'tech',
 };
 
 const MEDIUM_KEYWORDS: KeywordMap = {

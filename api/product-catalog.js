@@ -219,35 +219,12 @@ export default async function handler(req) {
     return json({ error: 'Method not allowed' }, 405, cors);
   }
 
-  // Read from Redis (populated by Railway ais-relay seed loop)
-  const cached = await getFromCache();
-  if (cached) {
-    return json(withPublicFacts(cached), 200, cors, 'public, max-age=300, s-maxage=600, stale-while-revalidate=300', 'cache');
-  }
-
-  // Redis empty (purged or seed hasn't run). Try Dodo directly as backup.
-  // May fail from Vercel IPs (401) — falls back to static prices.
-  if (DODO_API_KEY) {
-    const dodoPrices = await fetchPricesFromDodo();
-    const pricedPublicIds = Object.entries(CATALOG)
-      .filter(([, v]) => PUBLIC_TIER_GROUPS.includes(v.tierGroup) && v.tierGroup !== 'free' && v.tierGroup !== 'enterprise')
-      .map(([id]) => id);
-    const dodoPriceCount = pricedPublicIds.filter(id => dodoPrices[id]).length;
-    if (dodoPriceCount > 0) {
-      const priceSource = dodoPriceCount === pricedPublicIds.length ? 'dodo' : 'partial';
-      const tiers = buildTiers(dodoPrices);
-      const now = Date.now();
-      const result = withPublicFacts({ tiers, fetchedAt: now, cachedUntil: now + CACHE_TTL * 1000, priceSource });
-      // Don't write to Redis — let the Railway seed own that key with its longer TTL.
-      // Just return the result with short cache so the next Railway cycle repopulates properly.
-      // Header must carry the SAME source as the body: a partial Dodo read
-      // stamped 'dodo' here made probes read a degraded response as fully live.
-      return json(result, 200, cors, 'public, max-age=60, s-maxage=60', priceSource);
-    }
-  }
-
-  // All sources failed. Return fallback with short cache.
-  const tiers = buildTiers({});
+  // End Times Monitor: Dodo commerce catalog is retired.
   const now = Date.now();
-  return json(withPublicFacts({ tiers, fetchedAt: now, cachedUntil: now + 60_000, priceSource: 'fallback' }), 200, cors, 'public, max-age=60, s-maxage=60', 'fallback');
+  return json(withPublicFacts({
+    tiers: [],
+    fetchedAt: now,
+    cachedUntil: now + 60_000,
+    priceSource: 'retired',
+  }), 200, cors, 'public, max-age=300, s-maxage=600', 'retired');
 }

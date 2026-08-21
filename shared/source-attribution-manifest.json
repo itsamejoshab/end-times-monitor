@@ -2601,6 +2601,23 @@
       ]
     },
     {
+      "host": "csw.org.uk",
+      "provider": "csw.org.uk",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit csw.org.uk and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "ctvnews.ca",
       "provider": "ctvnews.ca",
       "kind": "feed",
@@ -3309,6 +3326,9 @@
       "attribution": "Credit eff.org and link to the original feed publisher.",
       "status": "terms-review",
       "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
         {
           "path": "src/config/feeds.ts"
         }
@@ -6001,6 +6021,23 @@
       ]
     },
     {
+      "host": "morningstarnews.org",
+      "provider": "morningstarnews.org",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit morningstarnews.org and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "moxie.foxbusiness.com",
       "provider": "Fox Business",
       "kind": "feed",
@@ -6629,6 +6666,23 @@
       ]
     },
     {
+      "host": "opendoors.org",
+      "provider": "opendoors.org",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit opendoors.org and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "openmaps.gov.bc.ca",
       "provider": "BC Wildfire Service (OpenMaps)",
       "kind": "structured",
@@ -6862,6 +6916,23 @@
       "references": [
         {
           "path": "src/components/LiveNewsPanel.ts"
+        }
+      ]
+    },
+    {
+      "host": "persecution.org",
+      "provider": "persecution.org",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit persecution.org and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
         }
       ]
     },
@@ -7412,7 +7483,7 @@
     {
       "host": "reliefweb.int",
       "provider": "reliefweb.int",
-      "kind": "structured",
+      "kind": "feed+structured",
       "observed": true,
       "license": "Provider terms for this upstream API/dataset; verify before redistribution",
       "attribution": "Credit reliefweb.int and link to the original upstream API/dataset.",
@@ -7420,6 +7491,29 @@
       "references": [
         {
           "path": "scripts/seed-climate-news.mjs"
+        },
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
+      "host": "religionnews.com",
+      "provider": "religionnews.com",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit religionnews.com and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
         }
       ]
     },
@@ -9191,6 +9285,23 @@
       ]
     },
     {
+      "host": "timesofisrael.com",
+      "provider": "timesofisrael.com",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit timesofisrael.com and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "tools.cdc.gov",
       "provider": "tools.cdc.gov",
       "kind": "structured",
@@ -9471,6 +9582,9 @@
       "status": "terms-review",
       "references": [
         {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
           "path": "src/config/feeds.ts"
         }
       ]
@@ -9492,6 +9606,23 @@
         },
         {
           "path": "server/worldmonitor/cyber/v1/_shared.ts"
+        }
+      ]
+    },
+    {
+      "host": "uscirf.gov",
+      "provider": "uscirf.gov",
+      "kind": "feed",
+      "observed": true,
+      "license": "Provider terms for this feed publisher; verify before redistribution",
+      "attribution": "Credit uscirf.gov and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
         }
       ]
     },

@@ -163,7 +163,7 @@ const OREF_ALERTS_URL = 'https://www.oref.org.il/WarningMessages/alert/alerts.js
 const OREF_HISTORY_URL = 'https://www.oref.org.il/WarningMessages/alert/History/AlertsHistory.json';
 const OREF_POLL_INTERVAL_MS = Math.max(30_000, Number(process.env.OREF_POLL_INTERVAL_MS || 300_000));
 const OREF_PROXY_AVAILABLE = !!OREF_PROXY_AUTH;
-const SIREN_ALERTS_ENABLED = true; // Tzeva Adom is free, no proxy needed
+const SIREN_ALERTS_ENABLED = false; // End Times: OREF / Tzeva Adom sirens retired
 
 // Hebrew→English translation dictionaries for siren alerts
 const OREF_THREAT_TRANSLATIONS = (() => {
@@ -3480,7 +3480,8 @@ const RELAY_DIPLOMACY_KEYWORDS = [
 ];
 const RELAY_FLASHPOINT_SCORING_KEYWORDS = [
   'iran', 'tehran', 'russia', 'moscow', 'china', 'beijing', 'taiwan', 'ukraine', 'kyiv',
-  'north korea', 'pyongyang', 'israel', 'gaza', 'west bank', 'syria', 'damascus',
+  'north korea', 'pyongyang', 'israel', 'gaza', 'west bank', 'jerusalem', 'temple mount', 'red sea', 'hormuz',
+  'syria', 'damascus',
   'yemen', 'hezbollah', 'hamas', 'kremlin', 'pentagon', 'nato', 'wagner',
 ];
 const RELAY_DIPLOMACY_FLASHPOINT_PAIRS = [
@@ -12728,7 +12729,6 @@ server.listen(PORT, () => {
     return;
   }
   startTelegramPollLoop();
-  startOrefPollLoop();
   startUcdpSeedLoop();
   startMarketDataSeedLoop();
   // Aviation + NOTAM seeds — standalone Railway cron — scripts/seed-aviation.mjs
@@ -12755,11 +12755,9 @@ server.listen(PORT, () => {
   startUsniFleetSeedLoop();
   startShippingStressSeedLoop();
   startSocialVelocitySeedLoop();
-  startWsbTickersSeedLoop();
   startClimateNewsSeedLoop();
   startChokepointFlowsSeedLoop();
   startPizzintSeedLoop();
-  startDodoPriceSeedLoop();
 });
 
 wss.on('connection', (ws, req) => {

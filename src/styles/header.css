@@ -19,7 +19,6 @@ html.wm-pro-banner-reserved .pro-banner-slot {
 }
 
 .header-right {
-  --header-auth-slot-width: 200px;
   --header-findings-slot-width: 72px;
 
   padding-left: calc(var(--header-findings-slot-width) + 12px);
@@ -37,8 +36,7 @@ html.wm-pro-banner-reserved .pro-banner-slot {
 }
 
 #missionPresetMount,
-#unifiedSettingsMount,
-#authWidgetMount {
+#unifiedSettingsMount {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -58,15 +56,6 @@ html.wm-pro-banner-reserved .pro-banner-slot {
 #unifiedSettingsMount {
   min-width: 28px;
   min-height: 28px;
-}
-
-#authWidgetMount {
-  min-width: var(--header-auth-slot-width);
-  min-height: 32px;
-}
-
-.auth-header-widget-pending {
-  width: var(--header-auth-slot-width);
 }
 
 .auth-header-skeleton {
@@ -93,7 +82,6 @@ html.wm-pro-banner-reserved .pro-banner-slot {
 }
 
 #missionPresetMount:empty,
-#unifiedSettingsMount:empty,
-#authWidgetMount:empty {
+#unifiedSettingsMount:empty {
   visibility: hidden;
 }

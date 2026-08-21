@@ -1245,22 +1245,13 @@ describe('feed catalog drift', () => {
   ] as const;
   const CANADA_DEPTH_CATALOG = [
     'Toronto Star',
-    'National Post',
-    'Financial Post',
-    'iPolitics',
     'The Narwhal',
     'The Tyee',
-    "Maclean's",
     'Radio-Canada',
     'La Presse',
     'Le Devoir',
     'TVA Nouvelles',
-    'Vancouver Sun',
-    'Calgary Herald',
     'Winnipeg Free Press',
-    'Edmonton Journal',
-    'Ottawa Citizen',
-    'The Province',
     'CTV News',
     'CP24',
     'Montreal Gazette',
@@ -1279,22 +1270,13 @@ describe('feed catalog drift', () => {
     'Globe and Mail': 'https://www.theglobeandmail.com/arc/outboundfeeds/rss/category/canada/?outputType=xml',
     'Global News': 'https://globalnews.ca/feed/',
     'Toronto Star': 'https://www.thestar.com/search/?f=rss&t=article&c=news/canada',
-    'National Post': 'https://nationalpost.com/feed/',
-    'Financial Post': 'https://financialpost.com/feed/',
-    'iPolitics': 'https://www.ipolitics.ca/feed',
     'The Narwhal': 'https://thenarwhal.ca/feed/',
     'The Tyee': 'https://thetyee.ca/rss2.xml',
-    "Maclean's": 'https://macleans.ca/feed/',
     'Radio-Canada': 'https://ici.radio-canada.ca/info/rss/info/en-continu',
     'La Presse': 'https://www.lapresse.ca/actualites/rss',
     'Le Devoir': 'https://www.ledevoir.com/rss/manchettes.xml',
     'TVA Nouvelles': 'https://www.tvanouvelles.ca/rss.xml',
-    'Vancouver Sun': 'https://vancouversun.com/feed/',
-    'Calgary Herald': 'https://calgaryherald.com/feed/',
     'Winnipeg Free Press': 'https://www.winnipegfreepress.com/feed',
-    'Edmonton Journal': 'https://edmontonjournal.com/feed/',
-    'Ottawa Citizen': 'https://ottawacitizen.com/feed/',
-    'The Province': 'https://theprovince.com/feed/',
     'Yle News': 'https://yle.fi/rss/news',
     'NRK': 'https://www.nrk.no/nyheter/siste.rss',
     'Aftenposten': 'https://www.aftenposten.no/rss',
@@ -1314,7 +1296,7 @@ describe('feed catalog drift', () => {
       assert.ok(usDefaults.includes(name), `${name} must be DEFAULT_ENABLED us`);
     }
     assert.ok(usDefaults.includes('CTV News'), 'CTV News must be DEFAULT_ENABLED us');
-    assert.equal(usDefaults.includes('National Post'), false, 'National Post must not be DEFAULT_ENABLED us');
+    assert.equal(usDefaults.includes('The Narwhal'), false, 'The Narwhal must not be DEFAULT_ENABLED us');
     const enabled = feeds.getAllDefaultEnabledSources();
     const disabledEn = new Set(feeds.computeDefaultDisabledSources('en'));
     for (const name of feeds.CANADA_EN_DEFAULT_SOURCES) {

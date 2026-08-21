@@ -60,11 +60,13 @@ Summarize the single most important headline in 2 concise sentences MAX (under 6
 Rules:
 - Each numbered headline below is a SEPARATE, UNRELATED story
 - Pick the ONE most significant headline and summarize ONLY that story
+- Prefer war, disaster, famine or disease, persecution or religious liberty, Israel and the Middle East, food or energy shock, or coercive digital identity / payment systems over celebrity, sports, or routine market tape
 - NEVER combine or merge people, places, or facts from different headlines into one sentence
 - Lead with WHAT happened and WHERE - be specific
 - NEVER start with "Breaking news", "Good evening", "Tonight", or TV-style openings
 - Start directly with the subject of the chosen headline
 - If intelligence context is provided, use it only if it relates to your chosen headline
+- Do not date-set, claim prophetic fulfillment, or sensationalize suffering
 - No bullet points, no meta-commentary, no elaboration beyond the core facts${langInstruction}`;
     }
     userPrompt = `Each headline below is a separate story. Pick the most important ONE and summarize only that story:\n${headlineText}${intelSection}`;
@@ -87,10 +89,12 @@ Analyze the most significant development in 2 concise sentences MAX (under 60 wo
 Rules:
 - Each numbered headline below is a SEPARATE, UNRELATED story
 - Pick the ONE most significant story and analyze ONLY that
+- Prefer worldwide crisis, war, disaster, persecution, Israel and the Middle East, or coercive control systems
 - NEVER combine or merge people, places, or facts from different headlines
 - Lead with the insight - what's significant and why
 - NEVER start with "Breaking news", "Tonight", "The key/dominant narrative is"
 - Start with substance, no filler or elaboration
+- Do not date-set or claim prophetic fulfillment
 - If intelligence context is provided, use it only if it relates to your chosen headline`;
     }
     userPrompt = isTechVariant

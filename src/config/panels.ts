@@ -17,7 +17,7 @@ const _desktop = isDesktopRuntime();
 const FULL_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Map', enabled: true, priority: 1 },
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
-  'live-webcams': { name: 'Live Webcams', enabled: true, priority: 1 },
+  'live-webcams': { name: 'Live Webcams', enabled: false, priority: 1 },
   'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Insights', enabled: true, priority: 1 },
   'threat-timeline': { name: 'Threat Timeline', enabled: true, priority: 1 },
@@ -52,7 +52,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'daily-market-brief': { name: 'Daily Market Brief', enabled: true, priority: 1, premium: 'locked' as const },
   'chat-analyst': { name: 'WM Analyst', enabled: true, priority: 1, premium: 'locked' as const },
   economic: { name: 'Macro Stress', enabled: true, priority: 1 },
-  'global-procurement': { name: 'Global Procurement', enabled: true, priority: 1, premium: 'locked' as const },
+  'global-procurement': { name: 'Global Procurement', enabled: false, priority: 1, premium: 'locked' as const },
   'trade-policy': { name: 'Trade Policy', enabled: true, priority: 1, premium: 'locked' as const },
   'supply-chain': { name: 'Supply Chain', enabled: true, priority: 1, ...(_desktop && { premium: 'enhanced' as const }) },
   'china-corridors': { name: 'China Logistics Corridors', enabled: true, priority: 1 },
@@ -78,7 +78,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'economic-calendar': { name: 'Economic Calendar', enabled: false, priority: 2 },
   'cot-positioning': { name: 'COT Positioning', enabled: true, priority: 2 },
   'liquidity-shifts': { name: 'Liquidity Shifts', enabled: true, priority: 2 },
-  'positioning-247': { name: '24/7 Positioning', enabled: true, priority: 2 },
+  'positioning-247': { name: '24/7 Positioning', enabled: false, priority: 2 },
   'gold-intelligence': { name: 'Gold Intelligence', enabled: true, priority: 60 },
   'hormuz-tracker': { name: 'Hormuz Trade Tracker', enabled: true, priority: 2 },
   'energy-crisis': { name: 'Energy Crisis Tracker', enabled: true, priority: 2 },
@@ -102,7 +102,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'ucdp-events': { name: 'UCDP Conflict Events', enabled: true, priority: 2 },
   'disease-outbreaks': { name: 'Disease Outbreaks', enabled: true, priority: 2 },
   'social-velocity': { name: 'Social Velocity', enabled: true, priority: 2 },
-  'wsb-ticker-scanner': { name: 'WSB Ticker Scanner', enabled: true, priority: 75, premium: 'locked' as const },
+  'wsb-ticker-scanner': { name: 'WSB Ticker Scanner', enabled: false, priority: 75, premium: 'locked' as const },
   giving: { name: 'Global Giving', enabled: false, priority: 2 },
   displacement: { name: 'UNHCR Displacement', enabled: true, priority: 2 },
   climate: { name: 'Climate Anomalies', enabled: true, priority: 2 },
@@ -113,7 +113,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'defense-patents': { name: 'R&D Signal', enabled: true, priority: 2 },
   'radiation-watch': { name: 'Radiation Watch', enabled: true, priority: 2 },
   'thermal-escalation': { name: 'Thermal Escalation', enabled: true, priority: 2 },
-  'oref-sirens': { name: 'Israel Sirens', enabled: true, priority: 2, ...(_desktop && { premium: 'locked' as const }) },
+  'oref-sirens': { name: 'Israel Sirens', enabled: false, priority: 2, ...(_desktop && { premium: 'locked' as const }) },
   'telegram-intel': { name: 'Telegram Intel', enabled: true, priority: 2, ...(_desktop && { premium: 'locked' as const }) },
   'airline-intel': { name: 'Airline Intelligence', enabled: true, priority: 2 },
   'tech-readiness': { name: 'Tech Readiness Index', enabled: true, priority: 2 },
@@ -1162,6 +1162,41 @@ export const ALL_PANELS: Record<string, PanelConfig> = {
   ...FULL_PANELS,
 };
 
+/** Off-mission inherited panels. Saved prefs may still contain these keys; they stay disabled. */
+export const RETIRED_PANEL_IDS = new Set([
+  'live-webcams',
+  'windy-webcams',
+  'oref-sirens',
+  'wsb-ticker-scanner',
+  'global-procurement',
+  'positioning-247',
+  'consumer-prices',
+  'grocery-basket',
+  'bigmac',
+  'earnings-calendar',
+  'giving',
+  'positive-feed',
+  'progress',
+  'counters',
+  'spotlight',
+  'breakthroughs',
+  'digest',
+]);
+
+export function sanitizeRetiredPanels(
+  panelSettings: Record<string, PanelConfig>,
+): Record<string, PanelConfig> {
+  let changed = false;
+  const next: Record<string, PanelConfig> = { ...panelSettings };
+  for (const key of RETIRED_PANEL_IDS) {
+    if (next[key]?.enabled) {
+      next[key] = { ...next[key], enabled: false };
+      changed = true;
+    }
+  }
+  return changed ? next : panelSettings;
+}
+
 /** Per-variant canonical panel order (keys = which panels are enabled by default). */
 export const VARIANT_DEFAULTS: Record<string, string[]> = {
   full:      Object.keys(VARIANT_PANEL_CONFIGS.full),
@@ -1210,7 +1245,11 @@ export function getEffectivePanelConfig(key: string, variant: string): PanelConf
   const base = getVariantPanelConfigs(variant)?.[key] ?? ALL_PANELS[key];
   if (!base) return { name: key, enabled: false, priority: 2 };
   const override = VARIANT_PANEL_OVERRIDES[variant]?.[key] ?? {};
-  return { ...base, ...override };
+  return {
+    ...base,
+    ...override,
+    ...(RETIRED_PANEL_IDS.has(key) ? { enabled: false } : {}),
+  };
 }
 
 /**
@@ -1279,6 +1318,7 @@ export function restoreFreeMapPanelAccess(
  * Mirrors the entitlement checks in panel-layout.ts (single source of truth).
  */
 export function isPanelEntitled(key: string, config: PanelConfig, isPro = false): boolean {
+  if (RETIRED_PANEL_IDS.has(key)) return false;
   if (!config.premium) return true;
   // Dodo entitlements unlock all premium panels
   if (isEntitled()) return true;

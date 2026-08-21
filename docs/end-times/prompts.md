@@ -36,6 +36,11 @@ byte-identical. Change the shared copy and let the mirror test enforce parity.
 News summarization is re-exported from `server/worldmonitor/news/v1/_shared.ts`
 so existing tests keep importing that path.
 
+Keyword ranking (not LLM) lives in `shared/diplomacy-keywords.json`,
+`src/services/threat-classifier.ts`, `server/worldmonitor/news/v1/_classifier.ts`,
+and `scripts/_clustering.mjs`. RSS membership is `src/config/feeds.ts` plus
+`server/worldmonitor/news/v1/_feeds.ts`.
+
 ## Daily brief and digest pipeline
 
 These prompts feed the magazine / digest cron, not the interactive dashboard

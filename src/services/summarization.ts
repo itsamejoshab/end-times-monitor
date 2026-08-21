@@ -27,7 +27,7 @@ import {
   suppressServerSummarization,
   suppressServerSummarizationFor,
 } from '@/services/summarize-gate';
-import { hasPremiumAccess } from '@/services/panel-gating';
+import { hasLocalNewsLlmAccess, hasPremiumAccess } from '@/services/panel-gating';
 import {
   createSummarizationAttemptState,
   logChainOutcome,
@@ -89,7 +89,7 @@ const premiumNewsClient = new NewsServiceClient(getRpcBaseUrl(), {
 // panel-gating's hasPremiumAccess is the dual-signal source of truth.
 // translateText is deliberately NOT gated: it uses mode='translate' via the
 // plain newsClient, which the server allows for non-premium callers.
-configureSummarizeGate(() => hasPremiumAccess());
+configureSummarizeGate(() => hasPremiumAccess() || hasLocalNewsLlmAccess());
 const summaryBreaker = createCircuitBreaker<SummarizeArticleResponse>({ name: 'News Summarization', cacheTtlMs: 0 });
 
 const summaryResultBreaker = createCircuitBreaker<SummarizationResult | null>({

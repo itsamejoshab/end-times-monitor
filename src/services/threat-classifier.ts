@@ -161,6 +161,15 @@ const HIGH_KEYWORDS: KeywordMap = {
   'cruise missile': 'military',
   'air defense intercepted': 'military',
   'forces struck': 'conflict',
+  'persecution': 'conflict',
+  'church attack': 'conflict',
+  'religious freedom': 'diplomatic',
+  'religious liberty': 'diplomatic',
+  'famine': 'disaster',
+  'food shortage': 'disaster',
+  'cbdc': 'economic',
+  'digital identity': 'tech',
+  'social credit': 'tech',
 };
 
 const MEDIUM_KEYWORDS: KeywordMap = {
@@ -382,7 +391,7 @@ import {
   configureClassifyGate,
   suppressAiClassification,
 } from '@/services/classify-gate';
-import { hasPremiumAccess } from '@/services/panel-gating';
+import { hasLocalNewsLlmAccess, hasPremiumAccess } from '@/services/panel-gating';
 
 const classifyClient = new IntelligenceServiceClient(getRpcBaseUrl(), { fetch: premiumFetch });
 
@@ -392,7 +401,7 @@ const classifyClient = new IntelligenceServiceClient(getRpcBaseUrl(), { fetch: p
 // gate, every incoming headline fired an RPC that 401/403'd (~570k wasted
 // requests/day). panel-gating's hasPremiumAccess is the dual-signal source
 // of truth (API key, tester keys, Clerk role, Convex entitlement).
-configureClassifyGate(() => hasPremiumAccess());
+configureClassifyGate(() => hasPremiumAccess() || hasLocalNewsLlmAccess());
 
 const classifyBreaker = createCircuitBreaker<ThreatClassification | null>({
   name: 'AIClassify',

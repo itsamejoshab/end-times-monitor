@@ -113,6 +113,8 @@ You are compiling the WORLD BRIEF from the numbered stories below. Respond with 
 
 Rules:
 - "lead": 2-3 sentences, under 80 words, synthesizing the most consequential 2-3 threads. Cite every claim with the bracket number of its story, e.g. [1] or [3].
+- Prefer war, disaster, famine or disease, persecution, Israel and the Middle East, food or energy shock, and coercive control systems when those threads are in the numbered stories.
+- Do not date-set, claim prophetic fulfillment, or sensationalize suffering.
 - "lines": exactly one entry per numbered story, in order. Each "text" is ONE sentence under 30 words restating that story, ending with its citation [n].
 - Use ONLY facts present in the numbered story text. Do not add names, places, dates, numbers, or context that are not explicitly there.
 - Do not invent proper nouns (people, organizations, countries) that are not in the story text.

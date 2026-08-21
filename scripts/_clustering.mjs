@@ -55,6 +55,13 @@ const CRISIS_KEYWORDS = [
   'breaking', 'urgent', 'developing', 'exclusive',
 ];
 
+const WATCH_KEYWORDS = [
+  'persecution', 'religious freedom', 'religious liberty', 'church attack',
+  'blasphemy', 'pastor arrested', 'famine', 'food shortage', 'earthquake',
+  'cbdc', 'digital identity', 'digital id', 'social credit', 'central bank digital',
+  'jerusalem', 'temple mount',
+];
+
 const DEMOTE_KEYWORDS = [
   'ceo', 'earnings', 'stock', 'startup', 'data center', 'datacenter', 'revenue',
   'quarterly', 'profit', 'investor', 'ipo', 'funding', 'valuation',
@@ -266,6 +273,9 @@ export function scoreImportance(cluster, opts = {}) {
 
   const crisisN = countMatches(titleLower, CRISIS_KEYWORDS);
   if (crisisN > 0) score += 15 + crisisN * 5;
+
+  const watchN = countMatches(titleLower, WATCH_KEYWORDS);
+  if (watchN > 0) score += 40 + watchN * 10;
 
   const demoteN = countMatches(titleLower, DEMOTE_KEYWORDS);
   const demoteFinance = opts.demoteFinance !== false;
