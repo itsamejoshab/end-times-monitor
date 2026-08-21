@@ -15,6 +15,7 @@ import { CHROME_UA, yahooGate } from '../../../_shared/constants';
 import { UPSTREAM_TIMEOUT_MS, sanitizeSymbol } from './_shared';
 import { storeStockAnalysisSnapshot } from './premium-stock-store';
 import { searchRecentStockHeadlines } from './stock-news-search';
+import { ANALYZE_STOCK_SYSTEM_PROMPT } from '../../../prompts/analyze-stock';
 
 export type Candle = {
   timestamp: number;
@@ -1619,7 +1620,7 @@ async function buildAiOverlay(
     messages: [
       {
         role: 'system',
-        content: 'You are a disciplined stock analyst. Return strict JSON only with top-level keys technical, rating, and newsSentiment. technical and rating must each contain summary, action, confidence, whyNow, technicalSummary, newsSummary, bullishFactors, and riskFactors. The technical narrative must remain paired with technical.signal and technical.signalScore; do not change its stated rating, action, or confidence based on fundamentals. The rating narrative must remain paired with rating.signal and rating.compositeScore and weigh fundamentals alongside technicals and news. All margin, return, growth, and debtToEquity values are decimal ratios (0.25 means 25%; debtToEquity 1.5 means debt is 1.5x equity). totalCash, totalDebt, freeCashflow, and ebitda are denominated in fundamentals.financialCurrency. Treat missing values as unknown. newsSentiment is a signed number from -1 to 1 scoring how bullish the supplied news headlines are for the stock (-1 very bearish, 0 neutral or no material news, 1 very bullish); base it only on the supplied headlines. newsSentiment is a model overlay, not a cause of any price move; do not claim a headline drove or caused the tape. Keep both narratives concise, factual, and free of disclaimers.',
+        content: ANALYZE_STOCK_SYSTEM_PROMPT,
       },
       {
         role: 'user',

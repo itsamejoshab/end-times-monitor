@@ -227,7 +227,8 @@ AI may not:
 
 Prompts must preserve a hard boundary between trusted instructions and
 untrusted source content. Model output must be schema-validated before
-publication.
+publication. Prompt text locations are catalogued in
+[`prompts.md`](prompts.md).
 
 ## Daily digest
 
