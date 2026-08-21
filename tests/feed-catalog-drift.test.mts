@@ -49,6 +49,7 @@ interface FeedEntry {
 interface FeedsModule {
   DEFAULT_ENABLED_SOURCES: Record<string, string[]>;
   DEFAULT_ENABLED_INTEL: string[];
+  END_TIMES_DEFAULT_SOURCES: readonly string[];
   FREE_CAP_PROTECTED_SOURCES: readonly string[];
   FRONTLINE_EUROPE_PROTECTED_SOURCES: readonly string[];
   CANADA_EN_DEFAULT_SOURCES: readonly string[];
@@ -803,6 +804,7 @@ describe('feed catalog drift', () => {
     assert.deepEqual(
       [...feeds.FREE_CAP_PROTECTED_SOURCES].sort(),
       [
+        ...feeds.END_TIMES_DEFAULT_SOURCES,
         ...FRONTLINE_EUROPE,
         ...REGIONAL_ROLLOUT_DEFAULTS,
         ...feeds.CANADA_EN_DEFAULT_SOURCES,

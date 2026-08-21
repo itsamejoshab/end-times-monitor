@@ -66,6 +66,18 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
     { name: 'CNN World', url: rss('https://news.google.com/rss/search?q=site:cnn.com+world+news+when:1d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Trump - Truth Social', url: rss('https://trumpstruth.org/feed') },
   ],
+  'end-times': [
+    // Curated current-event sources. The source registry documents doctrinal
+    // perspective separately from factual usefulness.
+    { name: 'Protestia', url: rss('https://protestia.substack.com/feed') },
+    { name: 'NYT Terrorism', url: rss('https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/topic/subject/terrorism/rss.xml') },
+    { name: 'End Time Headlines', url: rss('https://endtimeheadlines.org/feed/') },
+    {
+      name: 'Rapture Ready',
+      url: rss('https://www.raptureready.com/feed/'),
+      roundupMode: 'rapture-ready',
+    },
+  ],
   us: [
     { name: 'Reuters US', url: rss('https://news.google.com/rss/search?q=site:reuters.com+US&hl=en-US&gl=US&ceid=US:en') },
     { name: 'NPR News', url: rss('https://feeds.npr.org/1001/rss.xml') },
@@ -1125,7 +1137,7 @@ export const SOURCE_REGION_MAP: Record<string, { labelKey: string; feedKeys: str
   africa: { labelKey: 'header.sourceRegionAfrica', feedKeys: ['africa'] },
   latam: { labelKey: 'header.sourceRegionLatAm', feedKeys: ['latam'] },
   asia: { labelKey: 'header.sourceRegionAsiaPacific', feedKeys: ['asia'] },
-  topical: { labelKey: 'header.sourceRegionTopical', feedKeys: ['energy', 'tech', 'ai', 'finance', 'layoffs', 'thinktanks'] },
+  topical: { labelKey: 'header.sourceRegionTopical', feedKeys: ['end-times', 'energy', 'tech', 'ai', 'finance', 'layoffs', 'thinktanks'] },
   intel: { labelKey: 'header.sourceRegionIntel', feedKeys: [] },
 
   // Tech variant regions
@@ -1494,7 +1506,15 @@ export const REGIONAL_FEED_ROLLOUT_STAGES = [
  * Keep the narrower frontline set above for its one-shot migration contract;
  * this broader set is only for current cap selection.
  */
+export const END_TIMES_DEFAULT_SOURCES = [
+  'Protestia',
+  'NYT Terrorism',
+  'End Time Headlines',
+  'Rapture Ready',
+] as const;
+
 export const FREE_CAP_PROTECTED_SOURCES = [
+  ...END_TIMES_DEFAULT_SOURCES,
   ...FRONTLINE_EUROPE_PROTECTED_SOURCES,
   ...REGIONAL_FEED_ROLLOUT_DEFAULT_SOURCES,
   ...CANADA_EN_DEFAULT_SOURCES,
@@ -1547,6 +1567,7 @@ export function getStrategicDefaultSources(): Set<string> {
  */
 export const DEFAULT_ENABLED_SOURCES: Record<string, string[]> = {
   politics: ['BBC World', 'Guardian World', 'AP News', 'Reuters World', 'CNN World'],
+  'end-times': [...END_TIMES_DEFAULT_SOURCES],
   // Canada pack (#5960/#6604/#6605): CBC News + CTV News + Toronto Star
   // default-on for North America keyCountry CA (floors.CA = 3). Globe and Mail
   // + Global News remain catalog opt-in (arctic pack). Remaining depth names

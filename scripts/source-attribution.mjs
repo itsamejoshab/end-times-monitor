@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { dirname, extname, join } from 'node:path';
+import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -173,6 +173,30 @@ const PROVIDER_OVERRIDES = {
   'binance.com': licensedPublisherFeed('Binance'),
   'jin10.com': licensedPublisherFeed('Jin10'),
   'timesofindia.indiatimes.com': licensedPublisherFeed('Times of India'),
+  'endtimeheadlines.org': {
+    provider: 'End Time Headlines',
+    license: 'Publisher RSS and website terms; verify before public redistribution',
+    attribution: 'Credit End Time Headlines and link to the original publisher article.',
+    status: 'terms-review',
+  },
+  'www.nytimes.com': {
+    provider: 'The New York Times',
+    license: 'New York Times RSS and website terms; verify before public redistribution',
+    attribution: 'Credit The New York Times and link to the original article.',
+    status: 'terms-review',
+  },
+  'protestia.substack.com': {
+    provider: 'Protestia',
+    license: 'Publisher/Substack RSS and website terms; verify before public redistribution',
+    attribution: 'Credit Protestia and link to the original article.',
+    status: 'terms-review',
+  },
+  'www.raptureready.com': {
+    provider: 'Rapture Ready',
+    license: 'Publisher RSS and website terms; verify before public redistribution',
+    attribution: 'Credit Rapture Ready as the roundup curator and preserve each linked publisher URL.',
+    status: 'terms-review',
+  },
   'yemenonline.info': publisherMetadataFeed('Yemen Online'),
   'sanaacenter.org': publisherMetadataFeed("Sana'a Center"),
   'syriadirect.org': publisherMetadataFeed('Syria Direct'),
@@ -763,13 +787,13 @@ const PROVIDER_OVERRIDES = {
 // a provider-bearing override a separate, explicit lifecycle event instead of
 // something `--write` can silently normalize into the manifest.
 export const PROVIDER_IDENTITY_REVIEW = Object.freeze({
-  sha256: '84220f3a304feaf4f1338aae90e6f5036d78ee723d1aa69c87acabd1425d0736',
-  reason: 'Add the reviewed Times of India publisher identity for its licensed India RSS feed while retaining prior provider identities.',
+  sha256: 'dd23fc91cced3b3d67f670131d56089a70c4bc10552cb833388402fe5139ec6a',
+  reason: 'Add the reviewed End Times feed provider identities while retaining prior provider identities.',
   // A URL cited here is scanned like any other: this file sits inside
   // SOURCE_ROOTS, so citing a host that is not already a registered source
   // invents a provider row for it. The B.C. catalogue URLs above are safe
   // because that host is itself an observed source; parallel.ai is not.
-  reviewReference: 'Issue #7001 licensed publisher source-rights qualification; plus the prior Issue #6437, Issue #6622, Issue #6659, and PR #6447 identity reviews.',
+  reviewReference: 'itsamejoshab/end-times-monitor Issue #2 End Times feed integration; plus the prior Issue #7001, Issue #6437, Issue #6622, Issue #6659, and PR #6447 identity reviews.',
 });
 
 export function providerIdentityDigest(providerOverrides = PROVIDER_OVERRIDES) {
@@ -1503,8 +1527,8 @@ function escapeRegExp(value) {
 
 function inventoryMarkerPattern(leadingNewline) {
   return new RegExp(
-    `${leadingNewline ? '\\n' : ''}## (?:Audited|Observed) (?:Upstream|Source) Inventory\\n+` +
-      `${escapeRegExp(BEGIN_MARKER)}[\\s\\S]*?${escapeRegExp(END_MARKER)}`,
+    `${leadingNewline ? '\\r?\\n' : ''}## (?:Audited|Observed) (?:Upstream|Source) Inventory(?:\\r?\\n)+` +
+      `${escapeRegExp(BEGIN_MARKER)}[\\s\\S]*${escapeRegExp(END_MARKER)}`,
   );
 }
 
@@ -1643,6 +1667,6 @@ export function runSourceAttribution({
   return 0;
 }
 
-if (process.argv[1] && process.argv[1].endsWith('scripts/source-attribution.mjs')) {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   process.exitCode = runSourceAttribution({ args: process.argv.slice(2) });
 }

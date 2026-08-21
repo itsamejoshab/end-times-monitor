@@ -38,6 +38,20 @@ describe('classifyOpinion — STRONG signals (sufficient alone)', () => {
       );
     }
   });
+
+  it('explicit mixed-feed description label → opinion', () => {
+    for (const prefix of ['(OPINION)', '(Commentary)', 'Analysis:', 'Op-Ed:']) {
+      assert.equal(
+        classifyOpinion({
+          title: 'A headline without an editorial label',
+          link: 'https://example.com/world/article',
+          description: `${prefix} The author argues for a different policy.`,
+        }),
+        true,
+        `"${prefix}" description prefix should classify as opinion`,
+      );
+    }
+  });
 });
 
 describe('classifyOpinion — CORROBORATING signals (need a STRONG signal OR two CORROBORATING)', () => {
@@ -118,6 +132,17 @@ describe('classifyOpinion — does NOT false-positive on hard news', () => {
     );
     assert.equal(
       classifyOpinion({ title: 'Analysis firm downgrades the bank', link: 'https://example.com/business/downgrade' }),
+      false,
+    );
+  });
+
+  it('ordinary description prose beginning with "analysis" is NOT an explicit label', () => {
+    assert.equal(
+      classifyOpinion({
+        title: 'Researchers publish new earthquake model',
+        link: 'https://example.com/science/model',
+        description: 'Analysis shows the model predicts aftershocks more accurately.',
+      }),
       false,
     );
   });

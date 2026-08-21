@@ -124,6 +124,11 @@ export const SOURCE_TYPES: Record<string, SourceType> = {
   'AI News': 'tech', 'ArXiv AI': 'tech', 'VentureBeat AI': 'tech', 'Wired': 'tech',
   'Layoffs.fyi': 'tech', 'Layoffs News': 'tech',
 
+  // End Times Watch. These types describe publishing practice, not agreement
+  // with the project's amillennial framework.
+  'Protestia': 'other', 'NYT Terrorism': 'mainstream',
+  'End Time Headlines': 'other', 'Rapture Ready': 'other',
+
   // Regional Tech Startups
   'EU Startups': 'tech', 'Tech.eu': 'tech', 'Sifted (Europe)': 'tech',
   'The Next Web': 'tech', 'Tech in Asia': 'tech', 'e27 (SEA)': 'tech',
@@ -344,6 +349,21 @@ export const SOURCE_PROPAGANDA_RISK: Record<string, SourceRiskProfile> = {
   'Coinbase Blog': { risk: 'medium', note: 'Coinbase first-party company publication; treat statements as issuer claims' },
   'Binance Announcements': { risk: 'medium', note: 'Binance first-party announcement channel; treat statements as issuer claims' },
   'Jin10': { risk: 'medium', note: 'Chinese financial-news and market-data publisher; limited English editorial transparency' },
+  'Protestia': {
+    risk: 'medium',
+    knownBiases: ['Conservative evangelical polemics'],
+    note: 'Polemical evangelical reporting and commentary; factual claims require linked evidence and selection does not imply doctrinal endorsement',
+  },
+  'End Time Headlines': {
+    risk: 'medium',
+    knownBiases: ['Charismatic and dispensational end-times perspective'],
+    note: 'Mixed event aggregation and opinion; explicit opinion items are excluded from the daily brief',
+  },
+  'Rapture Ready': {
+    risk: 'medium',
+    knownBiases: ['Pre-tribulation dispensational perspective'],
+    note: 'Curated linked-news roundup from a secret-rapture perspective; links are discovery evidence only and do not inform doctrine or date-setting',
+  },
   // Independent RU exile press — not state media; eligible for EN defaults (#5950)
   'Meduza': { risk: 'low', knownBiases: ['Anti-Kremlin'], note: 'Independent Russian exile outlet (Riga); English + Russian RSS' },
 
@@ -436,6 +456,11 @@ export const SOURCE_PROPAGANDA_RISK: Record<string, SourceRiskProfile> = {
   'Guardian World': { risk: 'low', knownBiases: ['Center-left'], note: 'Scott Trust ownership, no shareholders' },
   'Financial Times': { risk: 'low', note: 'Business focus, Nikkei-owned' },
   'Times of India': { risk: 'low', note: 'Major Indian national newspaper with an established editorial newsroom' },
+  'NYT Terrorism': {
+    risk: 'low',
+    knownBiases: ['Center-left'],
+    note: 'New York Times terrorism topic feed; opinion-section URLs remain subject to the shared opinion filter',
+  },
   'Fox Business': { risk: 'low', note: 'Commercial U.S. business-news publisher' },
   'Business Insider': { risk: 'low', note: 'Commercial business-news publisher with editorial standards' },
   'Wired': { risk: 'low', note: 'Technology publication with editorial standards' },

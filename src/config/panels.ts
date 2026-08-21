@@ -17,6 +17,7 @@ const _desktop = isDesktopRuntime();
 const FULL_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Map', enabled: true, priority: 1 },
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
+  'end-times': { name: 'End Times Watch', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: false, priority: 1 },
   'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Insights', enabled: true, priority: 1 },
@@ -1551,7 +1552,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   topical: {
     labelKey: 'header.panelCatTopical',
-    panelKeys: ['energy', 'gov', 'thinktanks', 'tech', 'ai', 'layoffs'],
+    panelKeys: ['end-times', 'energy', 'gov', 'thinktanks', 'tech', 'ai', 'layoffs'],
     variants: ['full', 'energy'],
   },
   dataTracking: {

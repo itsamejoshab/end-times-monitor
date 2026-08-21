@@ -3,6 +3,7 @@ export interface ServerFeed {
   url: string;
   lang?: string;
   strategicDefault?: boolean;
+  roundupMode?: 'rapture-ready';
   /**
    * Positive values start earlier in a cold digest build. This is a fetch
    * scheduling hint only; it does not affect ranking, source tier, or UI
@@ -55,6 +56,16 @@ export const VARIANT_FEEDS: Record<string, Record<string, ServerFeed[]>> = {
       { name: 'Reuters World', url: gn('site:reuters.com world when:1d') },
       { name: 'CNN World', url: gn('site:cnn.com world news when:1d') },
       { name: 'Trump - Truth Social', url: 'https://trumpstruth.org/feed' },
+    ],
+    'end-times': [
+      { name: 'Protestia', url: 'https://protestia.substack.com/feed' },
+      { name: 'NYT Terrorism', url: 'https://www.nytimes.com/svc/collections/v1/publish/https://www.nytimes.com/topic/subject/terrorism/rss.xml' },
+      { name: 'End Time Headlines', url: 'https://endtimeheadlines.org/feed/' },
+      {
+        name: 'Rapture Ready',
+        url: 'https://www.raptureready.com/feed/',
+        roundupMode: 'rapture-ready',
+      },
     ],
     us: [
       { name: 'Reuters US', url: gn('site:reuters.com US when:1d') },

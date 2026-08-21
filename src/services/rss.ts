@@ -14,6 +14,7 @@ import { mlWorker } from './ml-worker';
 import { isHeadlineMemoryEnabled } from './ai-flow-settings';
 import { yieldToMain } from '@/utils/after-paint';
 import { createYieldingWorkQueue } from '@/utils/yielding-work-queue';
+import { extractRaptureReadyRoundupItems } from '../../shared/roundup-feed-parser.js';
 
 const FEED_COOLDOWN_MS = 5 * 60 * 1000;
 const MAX_FAILURES = 2;
@@ -40,13 +41,10 @@ function fromSerializable(items: Array<Omit<NewsItem, 'pubDate'> & { pubDate: st
   return items.map(item => ({ ...item, pubDate: new Date(item.pubDate) }));
 }
 
-// Cache key prefix. Bumped from `feed:` → `feed:v2:` when the item schema
-// gained `pubDateMissing` (U3 of plan 2026-05-23-001). Old `feed:`-prefix
-// entries deserialize without the flag, which would silently keep the
-// false-freshness bug alive in cached items until natural TTL. The bump
-// invalidates cleanly; old entries can be left to expire. See skill
-// `redis-cache-staleness-gotchas` for the recipe.
+// v2 added pubDateMissing. Roundup parsing gets a source-local cache namespace
+// so its date-wrapper rows are invalidated without cold-starting every feed.
 const CACHE_PREFIX = 'feed:v2:';
+const ROUNDUP_CACHE_PREFIX = 'feed:v2:roundup-v1:';
 
 function getFeedScope(feedName: string, lang: string): string {
   return `${feedName}${FEED_SCOPE_SEPARATOR}${lang}`;
@@ -61,8 +59,12 @@ function parseFeedScope(feedScope: string): { feedName: string; lang: string } {
   };
 }
 
-function getPersistentFeedKey(feedScope: string): string {
-  return `${CACHE_PREFIX}${feedScope}`;
+function getPersistentFeedPrefix(roundupMode: Feed['roundupMode']): string {
+  return roundupMode ? ROUNDUP_CACHE_PREFIX : CACHE_PREFIX;
+}
+
+function getPersistentFeedKey(feedScope: string, roundupMode: Feed['roundupMode']): string {
+  return `${getPersistentFeedPrefix(roundupMode)}${feedScope}`;
 }
 
 async function readPersistentFeed(key: string): Promise<NewsItem[] | null> {
@@ -71,21 +73,24 @@ async function readPersistentFeed(key: string): Promise<NewsItem[] | null> {
   return fromSerializable(entry.data);
 }
 
-async function loadPersistentFeed(feedScope: string): Promise<NewsItem[] | null> {
-  const scopedKey = getPersistentFeedKey(feedScope);
+async function loadPersistentFeed(
+  feedScope: string,
+  roundupMode: Feed['roundupMode'],
+): Promise<NewsItem[] | null> {
+  const prefix = getPersistentFeedPrefix(roundupMode);
+  const scopedKey = getPersistentFeedKey(feedScope, roundupMode);
   const scoped = await readPersistentFeed(scopedKey);
   if (scoped) return scoped;
 
   // Language-scope migration fallback (carried forward from the pre-v2
-  // prefix era): some older v2 cache rows that predate the language-scope
+  // prefix era): some current-prefix cache rows can predate language scoping
   // refactor were written without a `::<lang>` suffix. For English only,
-  // also try the unscoped key under the CURRENT v2 prefix. Pre-v2
-  // `feed:<feedScope>` and `feed:<feedName>` entries are deliberately NOT
-  // consulted — they predate the pubDateMissing schema and would
-  // re-introduce false-freshness for cached items.
+  // also try the unscoped key under the CURRENT prefix. Older prefixes (and,
+  // for roundup feeds, the ordinary v2 namespace) are deliberately not
+  // consulted because they predate the active schema or parser mode.
   const { feedName, lang } = parseFeedScope(feedScope);
   if (lang !== 'en') return null;
-  return readPersistentFeed(`${CACHE_PREFIX}${feedName}`);
+  return readPersistentFeed(`${prefix}${feedName}`);
 }
 
 // Clean up stale entries to prevent unbounded growth
@@ -230,7 +235,7 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
   if (isFeedOnCooldown(feedScope)) {
     const cached = feedCache.get(feedScope);
     if (cached) return cached.items;
-    return (await loadPersistentFeed(feedScope)) || [];
+    return (await loadPersistentFeed(feedScope, feed.roundupMode)) || [];
   }
 
   const cached = feedCache.get(feedScope);
@@ -263,7 +268,7 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
     if (parseError) {
       console.warn(`Parse error for ${feed.name}`);
       recordFeedFailure(feedScope);
-      const persistent = await loadPersistentFeed(feedScope);
+      const persistent = await loadPersistentFeed(feedScope, feed.roundupMode);
       return cached?.items || persistent || [];
     }
 
@@ -271,18 +276,64 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
     const isAtom = items.length === 0;
     if (isAtom) items = doc.querySelectorAll('entry');
 
-    const itemNodes = Array.from(items).slice(0, 5);
-    const parsed: Array<NewsItem & { threat: ReturnType<typeof classifyByKeyword> }> = [];
-    for (const [index, item] of itemNodes.entries()) {
-      const title = item.querySelector('title')?.textContent || '';
-      let link = '';
-      if (isAtom) {
-        const linkEl = item.querySelector('link[href]');
-        link = linkEl?.getAttribute('href') || '';
-      } else {
-        link = item.querySelector('link')?.textContent || '';
-      }
+    const sourceNodes = Array.from(items);
+    type FeedCandidate = {
+      title: string;
+      link: string;
+      pubDateStr: string;
+      sourceNode?: Element;
+    };
+    const publicationDateText = (item: Element): string => isAtom
+      ? (item.querySelector('published')?.textContent || item.querySelector('updated')?.textContent || '')
+      : (item.querySelector('pubDate')?.textContent
+        || item.querySelector('dc\\:date')?.textContent
+        || item.getElementsByTagName('dc:date')[0]?.textContent
+        || '');
+    const candidates: FeedCandidate[] = [];
 
+    if (feed.roundupMode === 'rapture-ready' && !isAtom) {
+      const roundupNode = sourceNodes.find((item) => {
+        const category = item.querySelector('category')?.textContent?.trim() ?? '';
+        const title = item.querySelector('title')?.textContent?.trim() ?? '';
+        return category === 'Rapture Ready End Times News'
+          && /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title);
+      });
+      if (roundupNode) {
+        const encoded = roundupNode.getElementsByTagNameNS(
+          'http://purl.org/rss/1.0/modules/content/',
+          'encoded',
+        )[0]?.textContent
+          || roundupNode.getElementsByTagName('content:encoded')[0]?.textContent
+          || '';
+        const pubDateStr = publicationDateText(roundupNode);
+        for (const item of extractRaptureReadyRoundupItems(encoded, { maxItems: 5 })) {
+          candidates.push({ title: item.title, link: item.link, pubDateStr });
+        }
+      }
+    }
+
+    if (candidates.length === 0) {
+      for (const item of sourceNodes.slice(0, 5)) {
+        const title = item.querySelector('title')?.textContent || '';
+        let link = '';
+        if (isAtom) {
+          const linkEl = item.querySelector('link[href]');
+          link = linkEl?.getAttribute('href') || '';
+        } else {
+          link = item.querySelector('link')?.textContent || '';
+        }
+        candidates.push({
+          title,
+          link,
+          pubDateStr: publicationDateText(item),
+          sourceNode: item,
+        });
+      }
+    }
+
+    const parsed: Array<NewsItem & { threat: ReturnType<typeof classifyByKeyword> }> = [];
+    for (const [index, candidate] of candidates.entries()) {
+      const { title, link, pubDateStr, sourceNode } = candidate;
       // Dublin Core (<dc:date>) fallback for RSS feeds. ArXiv RSS (already
       // in the feed registry as "ArXiv AI", "ArXiv ML") ships dc:date with
       // no <pubDate>; without this fallback every ArXiv item would land
@@ -292,12 +343,6 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
       // is an alternative that also works under browser DOMParser in XML
       // mode. textContent reads the element's inner text without namespace
       // gymnastics.
-      const pubDateStr = isAtom
-        ? (item.querySelector('published')?.textContent || item.querySelector('updated')?.textContent || '')
-        : (item.querySelector('pubDate')?.textContent
-          || item.querySelector('dc\\:date')?.textContent
-          || item.getElementsByTagName('dc:date')[0]?.textContent
-          || '');
       const { date: pubDate, missing: pubDateMissing } = parseFeedDate(pubDateStr);
       const threat = classifyByKeyword(title, SITE_VARIANT);
       const isAlert = threat.level === 'critical' || threat.level === 'high';
@@ -314,18 +359,21 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
         threat,
         ...(topGeo && { lat: topGeo.hub.lat, lon: topGeo.hub.lon, locationName: topGeo.hub.name }),
         lang: feed.lang,
-        ...(SITE_VARIANT === 'happy' && { imageUrl: extractImageUrl(item) }),
+        ...(SITE_VARIANT === 'happy' && sourceNode && { imageUrl: extractImageUrl(sourceNode) }),
       });
 
       // Each item performs DOM queries, date normalization, classification,
       // and geo inference. Let paint/input run before the next item instead
       // of concatenating all five into the same task on mobile. (#5165)
-      if (isMobile && index < itemNodes.length - 1) await yieldToMain();
+      if (isMobile && index < candidates.length - 1) await yieldToMain();
     }
 
     if (!noStoreResponse) {
       feedCache.set(feedScope, { items: parsed, timestamp: Date.now() });
-      void setPersistentCache(getPersistentFeedKey(feedScope), toSerializable(parsed));
+      void setPersistentCache(
+        getPersistentFeedKey(feedScope, feed.roundupMode),
+        toSerializable(parsed),
+      );
     }
     recordFeedSuccess(feedScope);
     ingestHeadlines(parsed.map(item => ({
@@ -365,7 +413,7 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
   } catch (e) {
     console.error(`Failed to fetch ${feed.name}:`, e);
     recordFeedFailure(feedScope);
-    const persistent = await loadPersistentFeed(feedScope);
+    const persistent = await loadPersistentFeed(feedScope, feed.roundupMode);
     return cached?.items || persistent || [];
   }
 }

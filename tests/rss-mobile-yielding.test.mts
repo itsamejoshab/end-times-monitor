@@ -15,14 +15,14 @@ describe('RSS mobile yielding', () => {
     );
     assert.match(rssSource, /const isMobile = isMobileDevice\(\);\s*const doc = await parseFeedXml\(text, isMobile\);/s);
     assert.match(rssSource, /if \(isMobile\) await yieldToMain\(\);/);
-    assert.match(rssSource, /if \(isMobile && index < itemNodes\.length - 1\) await yieldToMain\(\);/);
+    assert.match(rssSource, /if \(isMobile && index < candidates\.length - 1\) await yieldToMain\(\);/);
   });
 
   it('does not persist no-store relay responses in either feed cache', () => {
     assert.match(rssSource, /hasNoStoreCacheDirective\(response\.headers\)/);
     assert.match(
       rssSource,
-      /if \(!noStoreResponse\) \{\s*feedCache\.set\(feedScope[\s\S]*?setPersistentCache\(getPersistentFeedKey\(feedScope\)/s,
+      /if \(!noStoreResponse\) \{\s*feedCache\.set\(feedScope[\s\S]*?setPersistentCache\(\s*getPersistentFeedKey\(feedScope, feed\.roundupMode\)/s,
     );
   });
 });

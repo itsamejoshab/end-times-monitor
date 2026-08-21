@@ -50,6 +50,7 @@ import {
   PUBLISHER_FAMILIES,
   publisherFamilyFor,
 } from '../../../../shared/publisher-families.js';
+import { extractRaptureReadyRoundupItems } from '../../../../shared/roundup-feed-parser.js';
 
 const RSS_ACCEPT = 'application/rss+xml, application/xml, text/xml, */*';
 
@@ -494,7 +495,9 @@ async function fetchAndParseRss(
   // v7→v8: extend the same exclusion policy to duration-led anniversary
   // explainers ("10 years on from …"). Warm v7 rows already carry an
   // authoritative isOpinion="0", so force another cold parse on rollout.
-  const cacheKey = `rss:feed:v8:${variant}:${feed.url}`;
+  // v8→v9: configured roundup feeds now expand into direct event links and
+  // explicit feed-level opinion labels are stamped by the revised classifier.
+  const cacheKey = `rss:feed:v9:${variant}:${feed.url}`;
 
   try {
     // Read cache unconditionally — the v5 prefix guarantees pre-fix
@@ -604,6 +607,44 @@ function parseRssXml(xml: string, feed: ServerFeed, variant: string): ParseResul
   let parsedTotal = 0;
   let droppedUndated = 0;
 
+  const appendItem = ({
+    title,
+    link,
+    publishedAt,
+    description,
+    originPublisher = '',
+  }: {
+    title: string;
+    link: string;
+    publishedAt: number;
+    description: string;
+    originPublisher?: string;
+  }) => {
+    const threat = classifyByKeyword(title, variant);
+    items.push({
+      source: feed.name,
+      originPublisher,
+      title,
+      link,
+      publishedAt,
+      isAlert: threat.level === 'critical' || threat.level === 'high',
+      level: threat.level,
+      category: threat.category,
+      confidence: threat.confidence,
+      classSource: threat.source,
+      importanceScore: 0,
+      credibilityScore: 0,
+      corroborationCount: 1,
+      entityCorroborationCount: 0,
+      lang: feed.lang ?? 'en',
+      description,
+      isOpinion: classifyOpinion({ title, link, description, publishedAt }),
+      isFeelGood: classifyFeelGood({ title, link, description }),
+      isEphemeralLiveCoverage: classifyEphemeralLiveCoverage({ title, link, description }),
+      tickers: extractTickers(`${title} ${description}`, TICKER_DICTIONARY),
+    });
+  };
+
   const itemRegex = /<item[\s>]([\s\S]*?)<\/item>/gi;
   const entryRegex = /<entry[\s>]([\s\S]*?)<\/entry>/gi;
 
@@ -616,6 +657,7 @@ function parseRssXml(xml: string, feed: ServerFeed, variant: string): ParseResul
   const droppedFeedCap = Math.max(0, matches.length - ITEMS_PER_FEED);
 
   for (const match of matches.slice(0, ITEMS_PER_FEED)) {
+    if (items.length >= ITEMS_PER_FEED) break;
     const block = match[1]!;
 
     const title = extractTag(block, 'title');
@@ -654,8 +696,25 @@ function parseRssXml(xml: string, feed: ServerFeed, variant: string): ParseResul
     }
     const publishedAt = parsedMs;
 
-    const threat = classifyByKeyword(title, variant);
-    const isAlert = threat.level === 'critical' || threat.level === 'high';
+    if (
+      feed.roundupMode === 'rapture-ready' &&
+      !isAtom &&
+      extractTag(block, 'category') === 'Rapture Ready End Times News' &&
+      /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title)
+    ) {
+      const encoded = extractRawTagBody(block, 'content:encoded');
+      const roundupItems = extractRaptureReadyRoundupItems(encoded, {
+        maxItems: ITEMS_PER_FEED - items.length,
+        maxDescriptionLength: MAX_DESCRIPTION_LEN,
+      });
+      if (roundupItems.length > 0) {
+        for (const roundupItem of roundupItems) {
+          appendItem({ ...roundupItem, publishedAt });
+        }
+        continue;
+      }
+    }
+
     const description = extractDescription(block, isAtom, title);
 
     // RSS 2.0 <source url="...">Name</source> — the originating publisher,
@@ -666,28 +725,7 @@ function parseRssXml(xml: string, feed: ServerFeed, variant: string): ParseResul
     // regex accident.
     const originPublisher = isAtom ? '' : extractTag(block, 'source');
 
-    items.push({
-      source: feed.name,
-      originPublisher,
-      title,
-      link,
-      publishedAt,
-      isAlert,
-      level: threat.level,
-      category: threat.category,
-      confidence: threat.confidence,
-      classSource: threat.source,
-      importanceScore: 0,
-      credibilityScore: 0,
-      corroborationCount: 1,
-      entityCorroborationCount: 0,
-      lang: feed.lang ?? 'en',
-      description,
-      isOpinion: classifyOpinion({ title, link, description, publishedAt }),
-      isFeelGood: classifyFeelGood({ title, link, description }),
-      isEphemeralLiveCoverage: classifyEphemeralLiveCoverage({ title, link, description }),
-      tickers: extractTickers(`${title} ${description}`, TICKER_DICTIONARY),
-    });
+    appendItem({ title, link, publishedAt, description, originPublisher });
   }
 
   // Per-feed structured WARN when every parsed item was dropped for missing
