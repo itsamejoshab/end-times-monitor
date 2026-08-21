@@ -122,13 +122,10 @@ import {
   hasCuratedLayerExplanation,
   isLayerEntitled,
   isLayerToggleAllowed,
-  sanitizeLockedLayers,
   type MapVariant,
 } from '@/config/map-layer-definitions';
-import { isProTierResolved } from '@/services/widget-store';
 import { renderLayerExplanationCard } from '@/utils/layer-explanation-card';
-import { getAuthState, subscribeAuthState } from '@/services/auth-state';
-import { onEntitlementChange } from '@/services/entitlements';
+import { getAuthState } from '@/services/auth-state';
 import { hasPremiumAccess } from '@/services/panel-gating';
 import { trackGateHit } from '@/services/analytics';
 import { MapPopup, type PopupType } from './MapPopup';
@@ -591,8 +588,6 @@ export class DeckGLMap {
   private cyberThreats: CyberThreat[] = [];
   private aptGroups: import('@/types').APTGroup[] = [];
   private aptGroupsLoaded = false;
-  private _unsubscribeAuthState: (() => void) | null = null;
-  private _unsubscribeEntitlement: (() => void) | null = null;
   private aptGroupsLayerFailed = false;
   private satelliteImageryLayerFailed = false;
   private iranEvents: IranEvent[] = [];
@@ -620,7 +615,6 @@ export class DeckGLMap {
   private techEvents: TechEventMarker[] = [];
   private flightDelays: AirportDelayAlert[] = [];
   private aircraftPositions: PositionSample[] = [];
-  private aircraftFetchTimer: ReturnType<typeof setInterval> | null = null;
   private news: NewsItem[] = [];
   private newsLocations: Array<{ lat: number; lon: number; title: string; threatLevel: string; timestamp?: Date }> = [];
   private newsLocationFirstSeen = new Map<string, number>();
@@ -5573,12 +5567,10 @@ export class DeckGLMap {
     toggles.className = 'layer-toggles deckgl-layer-toggles';
 
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'deck');
-    const premiumUnlocked = hasPremiumAccess(getAuthState());
     const layerConfig = layerDefs.map(def => ({
       key: def.key,
       label: resolveLayerLabel(def, t),
       icon: def.icon,
-      premium: def.premium,
       explainLabel: escapeHtml(`Explain ${resolveLayerLabel(def, t)} layer`),
       hasExplanation: hasCuratedLayerExplanation(def.key),
     }));
@@ -5591,19 +5583,15 @@ export class DeckGLMap {
       </div>
       <input type="text" class="layer-search" placeholder="${t('components.deckgl.layerSearch')}" autocomplete="off" spellcheck="false" />
       <div class="toggle-list" style="max-height: 32vh; overflow-y: auto; scrollbar-width: thin;">
-        ${layerConfig.map(({ key, label, icon, premium, explainLabel, hasExplanation }) => {
-          const isLocked = premium === 'locked' && !premiumUnlocked;
-          const isEnhanced = premium === 'enhanced' && !premiumUnlocked;
-          return `
+        ${layerConfig.map(({ key, label, icon, explainLabel, hasExplanation }) => `
           <div class="layer-toggle-row" data-layer="${key}">
-            <label class="layer-toggle${isLocked ? ' layer-toggle-locked' : ''}" data-layer="${key}">
-              <input type="checkbox" ${this.state.layers[key as keyof MapLayers] ? 'checked' : ''}${isLocked ? ' disabled' : ''}>
+            <label class="layer-toggle" data-layer="${key}">
+              <input type="checkbox" ${this.state.layers[key as keyof MapLayers] ? 'checked' : ''}>
               <span class="toggle-icon">${icon}</span>
-              <span class="toggle-label">${label}${isLocked ? ' \uD83D\uDD12' : ''}${isEnhanced ? ' <span class="layer-pro-badge">PRO</span>' : ''}</span>
+              <span class="toggle-label">${label}</span>
             </label>
             <button type="button" class="layer-explain-btn${hasExplanation ? ' has-layer-explanation' : ''}" data-layer="${key}" aria-label="${explainLabel}">i</button>
-          </div>`;
-        }).join('')}
+          </div>`).join('')}
       </div>
     `, "legacy direct innerHTML migration"));
 
@@ -5614,89 +5602,20 @@ export class DeckGLMap {
 
     this.container.appendChild(toggles);
 
-    const lockedLayerControls = layerConfig
-      .filter(({ premium }) => premium === 'locked')
-      .map(({ key, label }) => {
-        const control = toggles.querySelector(`.layer-toggle[data-layer="${key}"]`);
-        return {
-          key,
-          label,
-          control,
-          input: control?.querySelector('input') as HTMLInputElement | null,
-          labelSpan: control?.querySelector('.toggle-label') as HTMLElement | null,
-        };
-      });
-    let lastPremiumUnlocked: boolean | null = null;
-    let lastSettledFree: boolean | null = null;
-
-    // Reconcile premium controls whenever either entitlement signal changes.
-    // Pro can come from Clerk role or the Convex entitlement snapshot, and
-    // both subscriptions must remain live: a user can later downgrade or sign
-    // out after unlocking a layer. The initial pending state stays visually
-    // locked, but it must not be persisted as free until the tier settles (or
-    // App's bounded fallback explicitly heals it).
-    const syncPremiumLayerControls = (): void => {
-      const premiumUnlocked = hasPremiumAccess(getAuthState());
-      const settledFree = isProTierResolved() && !premiumUnlocked;
-      if (premiumUnlocked === lastPremiumUnlocked && settledFree === lastSettledFree) return;
-      lastPremiumUnlocked = premiumUnlocked;
-      lastSettledFree = settledFree;
-      let stateChanged = false;
-
-      for (const { key, label: layerLabel, control, input, labelSpan } of lockedLayerControls) {
-        if (!control) continue;
-        const locked = !premiumUnlocked;
-        control.classList.toggle('layer-toggle-locked', locked);
-        if (input) {
-          input.disabled = locked;
-          if (settledFree && this.state.layers[key]) {
-            this.state.layers[key] = false;
-            input.checked = false;
-            this.setLayerReady(key, false);
-            this.onLayerChange?.(key, false, 'programmatic');
-            stateChanged = true;
-          }
-        }
-
-        if (labelSpan) {
-          labelSpan.textContent = locked ? `${layerLabel} 🔒` : layerLabel;
-        }
-      }
-
-      if (stateChanged) {
-        this.render();
-        this.updateLegend();
-        this.enforceLayerLimit();
-      }
-    };
-    this._unsubscribeAuthState = subscribeAuthState(syncPremiumLayerControls);
-    this._unsubscribeEntitlement = onEntitlementChange(syncPremiumLayerControls);
-
     // Bind toggle events
     toggles.querySelectorAll('.layer-toggle input').forEach(input => {
       input.addEventListener('change', () => {
         const layer = (input as HTMLInputElement).closest('.layer-toggle')?.getAttribute('data-layer') as keyof MapLayers;
         if (layer) {
           const enabled = (input as HTMLInputElement).checked;
-          if (!isLayerToggleAllowed(layer, this.state.layers[layer], hasPremiumAccess(getAuthState()))) {
+          if (!isLayerToggleAllowed(layer, this.state.layers[layer])) {
             (input as HTMLInputElement).checked = Boolean(this.state.layers[layer]);
             return;
           }
           const prevRadar = this.state.layers.weather;
           const prevCyber = this.state.layers.cyberThreats;
-          if (enabled && (layer === 'resilienceScore' || layer === 'ciiChoropleth')) {
-            const conflictingLayer = layer === 'resilienceScore' ? 'ciiChoropleth' : 'resilienceScore';
-            if (this.state.layers[conflictingLayer]) {
-              this.state.layers[conflictingLayer] = false;
-              const conflictingToggle = this.container.querySelector(`.layer-toggle[data-layer="${conflictingLayer}"] input`) as HTMLInputElement | null;
-              if (conflictingToggle) conflictingToggle.checked = false;
-              this.setLayerReady(conflictingLayer, false);
-              this.onLayerChange?.(conflictingLayer, false, 'programmatic');
-            }
-          }
           this.state.layers[layer] = enabled;
           if (layer === 'military' && !enabled) this.clearFlightTrails();
-          if (layer === 'flights') this.manageAircraftTimer(enabled);
           if (this.state.layers.weather && !prevRadar) this.startWeatherRadar();
           else if (!this.state.layers.weather && prevRadar) this.stopWeatherRadar();
           if (this.state.layers.cyberThreats && !prevCyber && !this.aptGroupsLoaded) this.loadAptGroups();
@@ -6320,18 +6239,10 @@ export class DeckGLMap {
   }
 
   public setLayers(layers: MapLayers): void {
-    // #6045 — strip locked premium layers for settled free users before
-    // checkbox force-sync (prevents checked+disabled stuck state from any
-    // bulk path: mission presets, layers:all, URL, cloud prefs).
-    let next = layers;
-    if (isProTierResolved() && !hasPremiumAccess(getAuthState())) {
-      next = sanitizeLockedLayers(layers, false);
-    }
     const prevRadar = this.state.layers.weather;
     const prevCyber = this.state.layers.cyberThreats;
-    this.state.layers = normalizeExclusiveChoropleths(next, this.state.layers);
+    this.state.layers = normalizeExclusiveChoropleths(layers, this.state.layers);
     if (!this.state.layers.military) this.clearFlightTrails();
-    this.manageAircraftTimer(this.state.layers.flights);
     if (this.state.layers.weather && !prevRadar) this.startWeatherRadar();
     else if (!this.state.layers.weather && prevRadar) this.stopWeatherRadar();
     if (this.state.layers.cyberThreats && !prevCyber && !this.aptGroupsLoaded) this.loadAptGroups();
@@ -6963,29 +6874,6 @@ export class DeckGLMap {
     });
   }
 
-  private manageAircraftTimer(enabled: boolean): void {
-    if (enabled) {
-      if (!this.aircraftFetchTimer) {
-        this.aircraftFetchTimer = setInterval(() => {
-          this.lastAircraftFetchCenter = null; // force refresh on poll
-          this.fetchViewportAircraft();
-        }, 120_000); // Match server cache TTL (120s anonymous OpenSky tier)
-        this.debouncedFetchAircraft();
-      }
-    } else {
-      // Invalidate any viewport request that can still resolve after the
-      // layer is disabled. Its response must not repopulate the search source.
-      this.aircraftFetchSeq += 1;
-      this.setLayerReady('flights', false);
-      if (this.aircraftFetchTimer) {
-        clearInterval(this.aircraftFetchTimer);
-        this.aircraftFetchTimer = null;
-      }
-      this.aircraftPositions = [];
-      this.onAircraftPositionsUpdate?.([]);
-    }
-  }
-
   private hasAircraftViewportChanged(): boolean {
     if (!this.maplibreMap) return false;
     if (!this.lastAircraftFetchCenter) return true;
@@ -7492,10 +7380,7 @@ export class DeckGLMap {
 
   // Enable layer programmatically
   public enableLayer(layer: keyof MapLayers): void {
-    // Defense in depth for CMD+K / agent / deep-link paths: locked premium
-    // layers stay off for free users (#6045). search-manager also gates
-    // before calling here; this catches any remaining enableLayer callers.
-    if (!isLayerEntitled(layer, hasPremiumAccess(getAuthState()))) return;
+    if (!isLayerEntitled(layer)) return;
     if (!this.state.layers[layer]) {
       if (layer === 'resilienceScore' && this.state.layers.ciiChoropleth) {
         this.state.layers.ciiChoropleth = false;
@@ -7515,7 +7400,6 @@ export class DeckGLMap {
       if (toggle) toggle.checked = true;
       if (layer === 'weather') this.startWeatherRadar();
       if (layer === 'cyberThreats' && !this.aptGroupsLoaded) this.loadAptGroups();
-      if (layer === 'flights') this.manageAircraftTimer(true);
       this.render();
       this.updateLegend();
       this.onLayerChange?.(layer, true, 'programmatic');
@@ -7528,7 +7412,7 @@ export class DeckGLMap {
     const prevRadar = this.state.layers.weather;
     const prevCyber = this.state.layers.cyberThreats;
     const nextEnabled = !this.state.layers[layer];
-    if (!isLayerToggleAllowed(layer, this.state.layers[layer], hasPremiumAccess(getAuthState()))) return;
+    if (!isLayerToggleAllowed(layer, this.state.layers[layer])) return;
     if (nextEnabled && layer === 'resilienceScore' && this.state.layers.ciiChoropleth) {
       this.state.layers.ciiChoropleth = false;
       const ciiToggle = this.container.querySelector(`.layer-toggle[data-layer="ciiChoropleth"] input`) as HTMLInputElement | null;
@@ -7549,7 +7433,6 @@ export class DeckGLMap {
     if (this.state.layers.weather && !prevRadar) this.startWeatherRadar();
     else if (!this.state.layers.weather && prevRadar) this.stopWeatherRadar();
     if (this.state.layers.cyberThreats && !prevCyber && !this.aptGroupsLoaded) this.loadAptGroups();
-    if (layer === 'flights') this.manageAircraftTimer(this.state.layers.flights);
     this.render();
     this.updateLegend();
     this.onLayerChange?.(layer, this.state.layers[layer], 'programmatic');
@@ -8109,10 +7992,6 @@ export class DeckGLMap {
     this.stopTradeAnimation();
     this.activeFlightTrails.clear();
     this.clearTrailsBtn = null;
-    this._unsubscribeAuthState?.();
-    this._unsubscribeAuthState = null;
-    this._unsubscribeEntitlement?.();
-    this._unsubscribeEntitlement = null;
     window.removeEventListener('theme-changed', this.handleThemeChange);
     window.removeEventListener('map-theme-changed', this.handleMapThemeChange);
     this.tradeReducedMotionMedia?.removeEventListener('change', this.handleTradeMotionPreferenceChange);
@@ -8146,10 +8025,6 @@ export class DeckGLMap {
     this.stopPulseAnimation();
     this.stopDayNightTimer();
     this.stopWeatherRadar();
-    if (this.aircraftFetchTimer) {
-      clearInterval(this.aircraftFetchTimer);
-      this.aircraftFetchTimer = null;
-    }
     this.stopLiveTankersLoop();
 
 

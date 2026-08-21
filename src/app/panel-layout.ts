@@ -41,7 +41,6 @@ import { getCurrentTheme } from '@/utils';
 import { trackCriticalBannerAction, trackCheckoutSuccess, trackCheckoutFailed, trackGateHit, trackMapViewChange, replayPendingCheckoutSuccess, replayPendingProFunnelEvents, replayPendingConversionEvents } from '@/services/analytics';
 import { getStoredMapModePreference } from '@/services/map-mode-preference';
 import { loadWidgets, saveWidget, isProUser, isProTierResolved } from '@/services/widget-store';
-import { sanitizeLockedLayers, shouldSanitizeLockedLayers } from '@/config/map-layer-definitions';
 import type { CustomWidgetSpec } from '@/services/widget-store';
 import {
   panelGateStateChanged,
@@ -2949,21 +2948,7 @@ export class PanelLayoutManager implements AppModule {
     }
 
     if (layers) {
-      let normalized = normalizeExclusiveChoropleths(layers, this.ctx.mapLayers);
-      if (normalized.resilienceScore && !this.ctx.map.isDeckGLActive?.()) {
-        normalized = { ...normalized, resilienceScore: false };
-      }
-      // MapContainer also sanitizes at the renderer boundary, but update the
-      // URL-derived context with the effective display state first. A shared
-      // link is not a user preference, so it must never overwrite the saved
-      // (and cloud-synced) map-layer selection.
-      if (shouldSanitizeLockedLayers(
-        hasPremiumAccess(getAuthState()),
-        isProTierResolved(),
-        this.callbacks.isFreeTierFallbackActive?.() === true,
-      )) {
-        normalized = sanitizeLockedLayers(normalized, false);
-      }
+      const normalized = normalizeExclusiveChoropleths(layers, this.ctx.mapLayers);
       this.ctx.initialUrlState.layers = normalized;
       this.ctx.mapLayers = normalized;
       this.ctx.map.setLayers(normalized);

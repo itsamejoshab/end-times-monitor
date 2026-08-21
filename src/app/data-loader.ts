@@ -50,10 +50,6 @@ import {
   fetchPredictions,
   fetchEarthquakes,
   fetchWeatherAlerts,
-  fetchCanadaRoads,
-  CANADA_ROAD_FRESHNESS_IDS,
-  getCanadaRoadSourceStates,
-  fetchCanadaAlerts,
   fetchInternetOutages,
   fetchTrafficAnomalies,
   fetchDdosAttacks,
@@ -121,7 +117,7 @@ import { fetchSatelliteTLEs, initSatRecs, propagatePositions, startPropagationLo
 import type { SatRecEntry } from '@/services/satellites';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import type { CorrelationSignal } from '@/services/correlation';
-import { fetchConflictEvents, fetchUcdpEvents, deduplicateAgainstAcled, deduplicateUcdpProjectionAggregates, fetchIranEvents } from '@/services/conflict';
+import { fetchConflictEvents, fetchUcdpEvents, deduplicateAgainstAcled, deduplicateUcdpProjectionAggregates } from '@/services/conflict';
 import { fetchUnhcrPopulation } from '@/services/displacement';
 import { fetchClimateAnomalies } from '@/services/climate';
 import { fetchSecurityAdvisories } from '@/services/security-advisories';
@@ -129,8 +125,6 @@ import { fetchThermalEscalations } from '@/services/thermal-escalation';
 import { fetchCrossSourceSignals } from '@/services/cross-source-signals';
 import { fetchTelegramFeed } from '@/services/telegram-intel';
 import { fetchOrefAlerts, startOrefPolling, stopOrefPolling, onOrefAlertsUpdate } from '@/services/oref-alerts';
-import { getResilienceRanking } from '@/services/resilience';
-import { buildResilienceChoroplethMap } from '@/components/resilience-choropleth-utils';
 import { enrichEventsWithExposure } from '@/services/population-exposure';
 import { debounce, getCircuitBreakerCooldownInfo, loadFromStorage, saveToStorage } from '@/utils';
 import { isFeatureAvailable, isFeatureEnabled } from '@/services/runtime-config';
@@ -272,7 +266,6 @@ function protoItemToNewsItem(p: ProtoNewsItem): NewsItem {
 const CYBER_LAYER_ENABLED = import.meta.env.VITE_ENABLE_CYBER_LAYER === 'true';
 // Iran-events domain sunset (war ended 2026-07). Default OFF: no fetch, even the
 // CII/risk-scoring path. Set VITE_ENABLE_IRAN_ATTACKS=true to restore. Mirrors CYBER_LAYER_ENABLED.
-const IRAN_ATTACKS_ENABLED = import.meta.env.VITE_ENABLE_IRAN_ATTACKS === 'true';
 
 export interface DataLoaderCallbacks {
   renderCriticalBanner: (postures: TheaterPostureSummary[]) => void;
@@ -1001,27 +994,14 @@ export class DataLoaderManager implements AppModule {
     if (hasPremiumAccess() && shouldLoad('wsb-ticker-scanner')) tasks.push({ name: 'wsbTickers', task: () => runGuarded('wsbTickers', () => this.loadWsbTickers()) });
     if (shouldLoad('economic')) tasks.push({ name: 'economicStress', task: () => runGuarded('economicStress', () => this.loadEconomicStress()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.weather) tasks.push({ name: 'weather', task: () => runGuarded('weather', () => this.loadWeatherAlerts()) });
-    if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.canadaRoads) tasks.push({ name: 'canadaRoads', task: () => runGuarded('canadaRoads', () => this.loadCanadaRoads()) });
-    if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.canadaAlerts) tasks.push({ name: 'canadaAlerts', task: () => runGuarded('canadaAlerts', () => this.loadCanadaAlerts()) });
     if (SITE_VARIANT !== 'happy' && !isDesktopRuntime() && this.ctx.mapLayers.ais) tasks.push({ name: 'ais', task: () => runGuarded('ais', () => this.loadAisSignals()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.cables) tasks.push({ name: 'cables', task: () => runGuarded('cables', () => this.loadCableActivity()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.cables) tasks.push({ name: 'cableHealth', task: () => runGuarded('cableHealth', () => this.loadCableHealth()) });
-    if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.flights) tasks.push({ name: 'flights', task: () => runGuarded('flights', () => this.loadFlightDelays()) });
     if (SITE_VARIANT !== 'happy' && CYBER_LAYER_ENABLED && this.ctx.mapLayers.cyberThreats) tasks.push({ name: 'cyberThreats', task: () => runGuarded('cyberThreats', () => this.loadCyberThreats()) });
-    if (IRAN_ATTACKS_ENABLED && SITE_VARIANT !== 'happy' && !isDesktopRuntime() && (this.ctx.mapLayers.iranAttacks || shouldLoadAny(['cii', 'strategic-risk', 'strategic-posture']))) tasks.push({ name: 'iranAttacks', task: () => runGuarded('iranAttacks', () => this.loadIranEvents()) });
     if (SITE_VARIANT !== 'happy' && (this.ctx.mapLayers.techEvents || SITE_VARIANT === 'tech')) tasks.push({ name: 'techEvents', task: () => runGuarded('techEvents', () => this.loadTechEvents()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.satellites && this.ctx.map?.isGlobeMode?.()) tasks.push({ name: 'satellites', task: () => runGuarded('satellites', () => this.loadSatellites()) });
-    if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.webcams) tasks.push({ name: 'webcams', task: () => runGuarded('webcams', () => this.loadWebcams()) });
     if (SITE_VARIANT !== 'happy' && (shouldLoad('sanctions-pressure') || this.ctx.mapLayers.sanctions)) {
       tasks.push({ name: 'sanctions', task: () => runGuarded('sanctions', () => this.loadSanctionsPressure()) });
-    }
-    if (this.ctx.mapLayers.resilienceScore) {
-      if (hasPremiumAccess()) {
-        tasks.push({ name: 'resilienceRanking', task: () => runGuarded('resilienceRanking', () => this.loadResilienceRanking()) });
-      } else {
-        this.ctx.map?.setResilienceRanking([]);
-        this.ctx.map?.setLayerReady('resilienceScore', false);
-      }
     }
     if (SITE_VARIANT !== 'happy' && (shouldLoad('radiation-watch') || this.ctx.mapLayers.radiationWatch)) {
       // Lock under the map-layer key ('radiationWatch') so a hydration load and
@@ -1086,12 +1066,6 @@ export class DataLoaderManager implements AppModule {
         case 'weather':
           await this.loadWeatherAlerts();
           break;
-        case 'canadaRoads':
-          await this.loadCanadaRoads();
-          break;
-        case 'canadaAlerts':
-          await this.loadCanadaAlerts();
-          break;
         case 'outages':
           await this.loadOutages();
           break;
@@ -1107,34 +1081,14 @@ export class DataLoaderManager implements AppModule {
         case 'protests':
           await this.loadProtests();
           break;
-        case 'flights':
-          await this.loadFlightDelays();
-          break;
         case 'military':
           await this.loadMilitary();
-          break;
-        case 'techEvents':
-          console.log('[loadDataForLayer] Loading techEvents...');
-          await this.loadTechEvents();
-          console.log('[loadDataForLayer] techEvents loaded');
-          break;
-        case 'positiveEvents':
-          await this.loadPositiveEvents();
-          break;
-        case 'kindness':
-          this.loadKindnessData();
-          break;
-        case 'iranAttacks':
-          await this.loadIranEvents();
           break;
         case 'satellites': {
           await this.loadSatellites();
           this.loadImageryFootprints();
           break;
         }
-        case 'webcams':
-          await this.loadWebcams();
-          break;
         case 'sanctions':
           await this.loadSanctionsPressure();
           break;
@@ -1149,9 +1103,6 @@ export class DataLoaderManager implements AppModule {
           break;
         case 'diseaseOutbreaks':
           await this.loadDiseaseOutbreaks();
-          break;
-        case 'resilienceScore':
-          await this.loadResilienceRanking();
           break;
       }
     } finally {
@@ -2862,45 +2813,6 @@ export class DataLoaderManager implements AppModule {
     }
   }
 
-  async loadCanadaRoads(): Promise<void> {
-    try {
-      const records = await fetchCanadaRoads();
-      const sourceStates = getCanadaRoadSourceStates();
-      const degradedSources = Object.entries(sourceStates)
-        .filter(([, state]) => state === 'unavailable' || state === 'malformed')
-        .map(([key]) => key);
-      this.ctx.map?.setCanadaRoads(records);
-      this.ctx.map?.setLayerReady('canadaRoads', records.length > 0);
-      this.ctx.statusPanel?.updateFeed('Canada Roads', {
-        status: degradedSources.length > 0 ? 'warning' : 'ok',
-        itemCount: records.length,
-        errorMessage: degradedSources.length > 0
-          ? `Partial coverage: ${degradedSources.join(', ')}`
-          : undefined,
-      });
-      // Per source, not one blanket ontario_511. Four feeds union onto this
-      // layer, and attributing all of them to Ontario meant an Alberta, Toronto
-      // or BC outage either read as an Ontario failure or — for the two with no
-      // id at all — never reached the freshness panel. getCanadaRoadSourceStates
-      // already knows which one is degraded; this just stops discarding it.
-      for (const { key, freshnessId } of CANADA_ROAD_FRESHNESS_IDS) {
-        const state = sourceStates[key];
-        if (state === 'unavailable' || state === 'malformed') {
-          dataFreshness.recordError(freshnessId, `${key}: ${state}`);
-        } else {
-          dataFreshness.recordUpdate(freshnessId, records.length);
-        }
-      }
-    } catch (error) {
-      this.ctx.map?.setLayerReady('canadaRoads', false);
-      this.ctx.statusPanel?.updateFeed('Canada Roads', { status: 'error' });
-      // The whole fetch failed, so every source is unknown — not just Ontario.
-      for (const { freshnessId } of CANADA_ROAD_FRESHNESS_IDS) {
-        dataFreshness.recordError(freshnessId, String(error));
-      }
-    }
-  }
-
   async loadWeatherAlerts(): Promise<void> {
     try {
       const alerts = await fetchWeatherAlerts();
@@ -2912,18 +2824,6 @@ export class DataLoaderManager implements AppModule {
       this.ctx.map?.setLayerReady('weather', false);
       this.ctx.statusPanel?.updateFeed('Weather', { status: 'error' });
       dataFreshness.recordError('weather', String(error));
-    }
-  }
-
-  async loadCanadaAlerts(): Promise<void> {
-    try {
-      const alerts = await fetchCanadaAlerts();
-      this.ctx.map?.setCanadaAlerts(alerts);
-      this.ctx.map?.setLayerReady('canadaAlerts', alerts.length > 0);
-      this.ctx.statusPanel?.updateFeed('Canada alerts', { status: 'ok', itemCount: alerts.length });
-    } catch (error) {
-      this.ctx.map?.setLayerReady('canadaAlerts', false);
-      this.ctx.statusPanel?.updateFeed('Canada alerts', { status: 'error' });
     }
   }
 
@@ -3291,23 +3191,6 @@ export class DataLoaderManager implements AppModule {
     }
   }
 
-  async loadIranEvents(): Promise<void> {
-    if (!IRAN_ATTACKS_ENABLED) {
-      this.ctx.map?.setLayerReady('iranAttacks', false);
-      return;
-    }
-    try {
-      const events = await fetchIranEvents();
-      this.ctx.intelligenceCache.iranEvents = events;
-      this.ctx.map?.setIranEvents(events);
-      this.ctx.map?.setLayerReady('iranAttacks', events.length > 0);
-      const coerced = events.map(e => ({ ...e, timestamp: Number(e.timestamp) || 0 }));
-      await runSignalAggregator(this.ctx.statusPanel, 'iran conflict events', (aggregator) => aggregator.ingestConflictEvents(coerced));
-    } catch {
-      this.ctx.map?.setLayerReady('iranAttacks', false);
-    }
-  }
-
   async loadAisSignals(): Promise<void> {
     try {
       const { disruptions, density } = await fetchAisSignals();
@@ -3453,68 +3336,6 @@ export class DataLoaderManager implements AppModule {
       this.ctx.statusPanel?.updateApi('ACLED', { status: 'error' });
       this.ctx.statusPanel?.updateApi('GDELT Doc', { status: 'error' });
       dataFreshness.recordError('gdelt_doc', String(error));
-    }
-  }
-
-  private lastWebcamBbox: { w: number; s: number; e: number; n: number; zoom: number } | null = null;
-  private lastWebcamFetchAt = 0;
-
-  async loadWebcams(): Promise<void> {
-    if (!this.ctx.map) return;
-    try {
-      const map = this.ctx.map;
-      const zoom = Math.max(2, map.getState().zoom ?? 3);
-
-      const now = Date.now();
-      if (now - this.lastWebcamFetchAt < 1000) return;
-
-      const bboxStr = map.getBbox();
-      const parts = bboxStr ? bboxStr.split(',').map(Number) : [-180, -90, 180, 90];
-      const w = parts[0] ?? -180;
-      const s = parts[1] ?? -90;
-      const e = parts[2] ?? 180;
-      const n = parts[3] ?? 90;
-
-      if (this.lastWebcamBbox && this.lastWebcamBbox.zoom === zoom) {
-        const prev = this.lastWebcamBbox;
-        const overlapW = Math.max(0, Math.min(prev.e, e) - Math.max(prev.w, w));
-        const overlapH = Math.max(0, Math.min(prev.n, n) - Math.max(prev.s, s));
-        const overlapArea = overlapW * overlapH;
-        const currentArea = Math.max(0.001, (e - w) * (n - s));
-        if (overlapArea / currentArea > 0.8) return;
-      }
-
-      this.lastWebcamFetchAt = now;
-      this.lastWebcamBbox = { w, s, e, n, zoom };
-
-      const { fetchWebcams } = await import('@/services/webcams');
-      const result = await fetchWebcams(zoom, { w, s, e, n });
-
-      const allMarkers = [...result.webcams, ...result.clusters];
-      map.setWebcams(allMarkers);
-      map.setLayerReady('webcams', allMarkers.length > 0);
-    } catch (err) {
-      console.warn('[data-loader] webcams failed:', err);
-      this.ctx.map?.setLayerReady('webcams', false);
-    }
-  }
-
-  async loadFlightDelays(): Promise<void> {
-    try {
-      const { fetchFlightDelays } = await import('@/services/aviation');
-      const delays = await fetchFlightDelays();
-      this.ctx.map?.setFlightDelays(delays);
-      this.ctx.map?.setLayerReady('flights', delays.length > 0);
-      this.ctx.intelligenceCache.flightDelays = delays;
-      this.ctx.statusPanel?.updateFeed('Flights', {
-        status: 'ok',
-        itemCount: delays.length,
-      });
-      this.ctx.statusPanel?.updateApi('FAA', { status: 'ok' });
-    } catch (error) {
-      this.ctx.map?.setLayerReady('flights', false);
-      this.ctx.statusPanel?.updateFeed('Flights', { status: 'error', errorMessage: String(error) });
-      this.ctx.statusPanel?.updateApi('FAA', { status: 'error' });
     }
   }
 
@@ -4440,25 +4261,6 @@ export class DataLoaderManager implements AppModule {
       this.callPanel('sanctions-pressure', 'showError');
       dataFreshness.recordError('sanctions_pressure', String(error));
       this.ctx.statusPanel?.updateApi('OFAC', { status: 'error' });
-    }
-  }
-
-  async loadResilienceRanking(): Promise<void> {
-    if (!hasPremiumAccess() || !this.ctx.map?.isDeckGLActive?.()) {
-      this.ctx.map?.setResilienceRanking([]);
-      this.ctx.map?.setLayerReady('resilienceScore', false);
-      return;
-    }
-
-    try {
-      const result = await getResilienceRanking();
-      this.ctx.map?.setResilienceRanking(result.items, result.greyedOut ?? []);
-      const displayable = buildResilienceChoroplethMap(result.items, result.greyedOut ?? []);
-      this.ctx.map?.setLayerReady('resilienceScore', displayable.size > 0);
-    } catch (error) {
-      console.error('[App] Resilience ranking fetch failed:', error);
-      this.ctx.map?.setResilienceRanking([]);
-      this.ctx.map?.setLayerReady('resilienceScore', false);
     }
   }
 

@@ -201,7 +201,6 @@ function applySetLayers(ctx: AppContext, action: Extract<AgentBusAction, { type:
 
   const allowed = getAllowedLayerKeys(currentMapVariant(options));
   const kind = currentRendererKind(ctx, options);
-  const isDeckGLActive = Boolean(ctx.map.isDeckGLActive?.());
   const isPremium = premiumAccess(options);
   const nextLayers = { ...ctx.mapLayers };
   const targets: AgentBusApplyTargetResult[] = [];
@@ -223,10 +222,6 @@ function applySetLayers(ctx: AppContext, action: Extract<AgentBusAction, { type:
 
     if (enabled && !isLayerEntitled(rawKey, isPremium)) {
       targets.push({ target: rawKey, status: 'denied', reason: 'layer_not_entitled' });
-      continue;
-    }
-    if (enabled && rawKey === 'resilienceScore' && !isDeckGLActive) {
-      targets.push({ target: rawKey, status: 'denied', reason: 'layer_not_executable' });
       continue;
     }
     if (enabled && !isLayerExecutable(rawKey, kind)) {

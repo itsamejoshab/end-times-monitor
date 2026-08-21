@@ -30,15 +30,10 @@ import {
 } from '@/config';
 import {
   sanitizeLayersForVariant,
-  sanitizeLockedLayers,
-  sanitizeLockedLayersWithOwnership,
-  restoreGateOwnedLockedLayers,
   mapLayerStatesEqual,
-  shouldSanitizeLockedLayers,
 } from '@/config/map-layer-definitions';
 import type { MapVariant } from '@/config/map-layer-definitions';
 import { getStoredMapModePreference } from '@/services/map-mode-preference';
-import { applyCanadaRoadsOptInMigration } from '@/services/canada-roads-opt-in';
 import {
   initDB,
   cleanOldSnapshots,
@@ -50,7 +45,7 @@ import {
   stopFlightHistoryCleanup,
 } from '@/services';
 import { enableVesselRuntime, stopLoadedVesselHistoryCleanup } from '@/services/military-vessels-lazy';
-import { isProUser, isProTierResolved, loadWidgets } from '@/services/widget-store';
+import { isProUser, loadWidgets } from '@/services/widget-store';
 import { mlWorker } from '@/services/ml-worker';
 import { getAiFlowSettings, subscribeAiFlowChange, isHeadlineMemoryEnabled } from '@/services/ai-flow-settings';
 import { startLearning } from '@/services/country-instability';
@@ -451,7 +446,7 @@ export class App {
     }
 
     if (
-      (keySet.has(STORAGE_KEYS.mapLayers) || keySet.has(STORAGE_KEYS.mapLayerGateOwnership))
+      keySet.has(STORAGE_KEYS.mapLayers)
       && !this.state.initialUrlState?.layers
     ) {
       let nextLayers = normalizeExclusiveChoropleths(
@@ -461,12 +456,6 @@ export class App {
         ),
         this.state.mapLayers,
       );
-      // #6045 — clear locked premium layers once free-tier is settled.
-      // Skip while entitlement is still resolving so Pro users don't lose
-      // resilienceScore during the Clerk/Convex boot window.
-      if (!tierReconciliationDeferred) {
-        nextLayers = this.sanitizeMapLayersForTier(nextLayers);
-      }
       if (!CYBER_LAYER_ENABLED) nextLayers.cyberThreats = false;
       if (!mapLayerStatesEqual(this.state.mapLayers, nextLayers)) {
         this.state.mapLayers = nextLayers;
@@ -952,11 +941,6 @@ export class App {
       console.log('[App] Variant changed - seeding new defaults, disabling cross-variant panels');
       // Reset map layers for the new variant (map layers are not user-personalized the same way)
       localStorage.removeItem(STORAGE_KEYS.mapLayers);
-      // Write an explicit empty set rather than removing the key: cloud sync
-      // now tolerates an ABSENT ownership sidecar (a row that predates it must
-      // not delete local ownership), so a genuine variant-reset clear only
-      // propagates cross-device when it is an explicit value.
-      localStorage.setItem(STORAGE_KEYS.mapLayerGateOwnership, '[]');
       mapLayers = normalizeExclusiveChoropleths(
         sanitizeLayersForVariant({ ...defaultLayers }, currentVariant as MapVariant), null,
       );
@@ -993,17 +977,6 @@ export class App {
           currentVariant as MapVariant,
         ), null,
       );
-      // #6045 — heal stuck locked layers from pre-gate localStorage once free
-      // tier is settled. Do not run while Pro status is still resolving.
-      // Persist immediately so dirty storage doesn't reintroduce the layer.
-      mapLayers = this.sanitizeMapLayersForTier(mapLayers);
-
-      mapLayers = applyCanadaRoadsOptInMigration(
-        mapLayers,
-        localStorage,
-        (layers) => saveToStorage(STORAGE_KEYS.mapLayers, layers),
-      );
-
       panelSettings = loadFromStorage<Record<string, PanelConfig>>(
         STORAGE_KEYS.panels,
         DEFAULT_PANELS
@@ -1203,10 +1176,6 @@ export class App {
       mapLayers = normalizeExclusiveChoropleths(
         sanitizeLayersForVariant(initialUrlState.layers, currentVariant as MapVariant), null,
       );
-      // #6045 — URL layer deep-links also cannot force locked layers on for free users.
-      // Ephemeral: the link is a view, so it must not overwrite the stored
-      // preference or touch gate ownership in either direction.
-      mapLayers = this.sanitizeMapLayersForTier(mapLayers, undefined, { ephemeralSnapshot: true });
       initialUrlState.layers = mapLayers;
     }
     if (!CYBER_LAYER_ENABLED) {
@@ -2052,7 +2021,6 @@ export class App {
         void this.dataLoader.loadDailyMarketBrief();
         void this.dataLoader.loadMarketImplications();
         void this.dataLoader.loadWsbTickers();
-        void this.dataLoader.loadResilienceRanking();
         void this.dataLoader.loadGlobalTenders();
       } else if (!nowPremium && hadPremium) {
         // Pro data must not remain visible or available from the client cache
@@ -2444,7 +2412,7 @@ export class App {
     this.enforceFreeTierLimits();
     // Stored dashboard-tab snapshots have their own panel copies.
     this.panelLayout.healStoredTabSnapshots();
-    this.healLockedMapLayers(this.freeTierGate.authSettleDeadlineExceeded);
+    this.healLockedMapLayers();
     return true;
   }
 
@@ -2468,115 +2436,21 @@ export class App {
     if (this.shouldDeferTierPreferenceReconciliation()) return;
     this.enforceFreeTierLimits();
     this.panelLayout.healStoredTabSnapshots();
-    // Clerk can remain pending forever when its script or key is unavailable.
-    // The gate's deadline is the explicit free-tier answer in that case, so
-    // heal stale locked map-layer state as well as panel/source state.
-    this.healLockedMapLayers(true);
+    this.healLockedMapLayers();
   });
 
-  /**
-   * Sanitize a map-layer snapshot only after the entitlement answer is safe to
-   * treat as free. The fallback argument is deliberately explicit: pending
-   * auth is not evidence that a paying user is free, but the bounded gate is.
-   */
-  private sanitizeMapLayersForTier(
-    layers: MapLayers,
-    fallbackActive = this.freeTierGate.authSettleDeadlineExceeded,
-    options: { ephemeralSnapshot?: boolean } = {},
-  ): MapLayers {
-    // A `?layers=` deep link is a VIEW, not the user's saved preference:
-    // parseMapUrlState rebuilds every LAYER_KEYS entry from the query string.
-    // Treating it as durable state let a shared link overwrite the stored
-    // (and cloud-synced) preference and seed gate ownership the user never
-    // chose, so an ephemeral snapshot is sanitized for display only.
-    const ephemeral = options.ephemeralSnapshot ?? false;
-    const premium = hasPremiumAccess();
-    // A Pro deep link is already entitled. Preserve the exact URL-derived
-    // display snapshot and do not even read durable gate ownership: restoring
-    // it here would enable layers the shared link deliberately omitted.
-    if (premium && ephemeral) return layers;
-
-    const existingOwnership = new Set(
-      loadFromStorage<string[]>(STORAGE_KEYS.mapLayerGateOwnership, []),
-    );
-
-    if (premium) {
-      if (existingOwnership.size === 0) return layers;
-      const restored = sanitizeLayersForVariant(
-        restoreGateOwnedLockedLayers(layers, existingOwnership),
+  /** Drop inherited World Monitor layer keys from the live map state. */
+  private healLockedMapLayers(): void {
+    const next = sanitizeLayersForVariant(this.state.mapLayers, SITE_VARIANT as MapVariant);
+    if (this.state.initialUrlState?.layers) {
+      this.state.initialUrlState.layers = sanitizeLayersForVariant(
+        this.state.initialUrlState.layers,
         SITE_VARIANT as MapVariant,
       );
-      // sanitizeLayersForVariant always returns a fresh object, so `restored
-      // === layers` is never true — an identity check here silently persisted
-      // on every pass. Compare by value.
-      const unchanged = mapLayerStatesEqual(layers, restored);
-      const persistence = persistGateOwnershipTransition(
-        'pro',
-        () => unchanged
-          || this.persistJsonStorageValue(STORAGE_KEYS.mapLayers, restored),
-        () => this.persistJsonStorageValue(STORAGE_KEYS.mapLayerGateOwnership, []),
-      );
-      return persistence.preferencePersisted ? restored : layers;
     }
-
-    if (!shouldSanitizeLockedLayers(premium, isProTierResolved(), fallbackActive)) {
-      return layers;
-    }
-
-    // Strip locked layers from the view without recording ownership: a shared
-    // link naming a locked layer must not make that layer auto-enable if the
-    // user later subscribes.
-    if (ephemeral) return sanitizeLockedLayers(layers, false);
-
-    const reconciled = sanitizeLockedLayersWithOwnership(layers, existingOwnership);
-    const ownershipChanged = !stringSetsEqual(existingOwnership, reconciled.gateOwned);
-    persistGateOwnershipTransition(
-      'free',
-      () => reconciled.layers === layers
-        || this.persistJsonStorageValue(STORAGE_KEYS.mapLayers, reconciled.layers),
-      () => !ownershipChanged
-        || this.persistJsonStorageValue(
-          STORAGE_KEYS.mapLayerGateOwnership,
-          [...reconciled.gateOwned],
-        ),
-    );
-    // Entitlement is a live safety boundary: blocked/quota-limited storage
-    // must not leave a locked layer rendered. The ordered writes above retain
-    // enough durable state to retry without ever persisting the destructive
-    // preference before ownership.
-    return reconciled.layers;
-  }
-
-  /** Heal the live map and persisted state after a downgrade or free fallback. */
-  private healLockedMapLayers(
-    fallbackActive = this.freeTierGate.authSettleDeadlineExceeded,
-  ): void {
-    const initialUrlLayers = this.state.initialUrlState?.layers;
-    if (initialUrlLayers) {
-      const healedUrlLayers = this.sanitizeMapLayersForTier(
-        initialUrlLayers,
-        fallbackActive,
-        { ephemeralSnapshot: true },
-      );
-      if (healedUrlLayers !== initialUrlLayers && this.state.initialUrlState) {
-        this.state.initialUrlState.layers = healedUrlLayers;
-      }
-    }
-    // When the session booted from a `?layers=` link, state.mapLayers IS that
-    // URL-derived view (seeded from the same local in the constructor), so this
-    // heal must stay ephemeral too. The boot-time ephemeral pass usually
-    // no-ops — shouldSanitizeLockedLayers is false while the tier is still
-    // unresolved — which makes THIS the call that actually acts, and a
-    // non-ephemeral run here would seed gate ownership from the link and write
-    // it to the stored preference, undoing the deep-link fix entirely.
-    const healed = this.sanitizeMapLayersForTier(
-      this.state.mapLayers,
-      fallbackActive,
-      initialUrlLayers ? { ephemeralSnapshot: true } : {},
-    );
-    if (healed === this.state.mapLayers) return;
-    this.state.mapLayers = healed;
-    this.state.map?.setLayers(healed);
+    if (mapLayerStatesEqual(this.state.mapLayers, next)) return;
+    this.state.mapLayers = next;
+    this.state.map?.setLayers(next);
     this.dataLoader.syncDataFreshnessWithLayers();
   }
 
@@ -3217,8 +3091,6 @@ export class App {
         { name: 'pizzint', fn: () => this.dataLoader.loadPizzInt(), intervalMs: REFRESH_INTERVALS.pizzint, condition: () => SITE_VARIANT === 'full' },
         { name: 'natural', fn: () => this.dataLoader.loadNatural(), intervalMs: REFRESH_INTERVALS.natural, condition: () => this.state.mapLayers.natural },
         { name: 'weather', fn: () => this.dataLoader.loadWeatherAlerts(), intervalMs: REFRESH_INTERVALS.weather, condition: () => this.state.mapLayers.weather },
-        { name: 'canadaRoads', fn: () => this.dataLoader.loadCanadaRoads(), intervalMs: REFRESH_INTERVALS.canadaRoads, condition: () => !!this.state.mapLayers.canadaRoads },
-        { name: 'canadaAlerts', fn: () => this.dataLoader.loadCanadaAlerts(), intervalMs: REFRESH_INTERVALS.canadaAlerts, condition: () => !!this.state.mapLayers.canadaAlerts },
         { name: 'fred', fn: () => this.dataLoader.loadFredData(), intervalMs: REFRESH_INTERVALS.fred, condition: () => this.isPanelNearViewport('economic') },
         { name: 'spending', fn: () => this.dataLoader.loadGovernmentSpending(), intervalMs: REFRESH_INTERVALS.spending, condition: () => this.isPanelNearViewport('economic') },
         { name: 'global-tenders', fn: () => this.dataLoader.loadGlobalTenders(), intervalMs: REFRESH_INTERVALS.spending, condition: () => hasPremiumAccess() && this.isPanelNearViewport('global-procurement') },
@@ -3231,7 +3103,6 @@ export class App {
         { name: 'ais', fn: () => this.dataLoader.loadAisSignals(), intervalMs: REFRESH_INTERVALS.ais, condition: () => this.state.mapLayers.ais },
         { name: 'cables', fn: () => this.dataLoader.loadCableActivity(), intervalMs: REFRESH_INTERVALS.cables, condition: () => this.state.mapLayers.cables },
         { name: 'cableHealth', fn: () => this.dataLoader.loadCableHealth(), intervalMs: REFRESH_INTERVALS.cableHealth, condition: () => this.state.mapLayers.cables },
-        { name: 'flights', fn: () => this.dataLoader.loadFlightDelays(), intervalMs: REFRESH_INTERVALS.flights, condition: () => this.state.mapLayers.flights },
         {
           name: 'cyberThreats', fn: () => {
             this.state.cyberThreatsCache = null;

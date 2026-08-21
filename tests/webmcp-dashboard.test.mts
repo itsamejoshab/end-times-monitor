@@ -500,17 +500,18 @@ describe('WebMCP live dashboard bindings', () => {
     const cases: Record<DashboardVariant, {
       allowed: keyof MapLayers;
       disallowed: keyof MapLayers;
+      deniedReason: 'unknown_layer' | 'variant_disallowed';
     }> = {
-      full: { allowed: 'conflicts', disallowed: 'startupHubs' },
-      tech: { allowed: 'startupHubs', disallowed: 'conflicts' },
-      finance: { allowed: 'tradeRoutes', disallowed: 'conflicts' },
-      commodity: { allowed: 'tradeRoutes', disallowed: 'conflicts' },
-      happy: { allowed: 'positiveEvents', disallowed: 'conflicts' },
-      energy: { allowed: 'tradeRoutes', disallowed: 'conflicts' },
+      full: { allowed: 'conflicts', disallowed: 'startupHubs', deniedReason: 'unknown_layer' },
+      tech: { allowed: 'datacenters', disallowed: 'conflicts', deniedReason: 'variant_disallowed' },
+      finance: { allowed: 'tradeRoutes', disallowed: 'conflicts', deniedReason: 'variant_disallowed' },
+      commodity: { allowed: 'tradeRoutes', disallowed: 'conflicts', deniedReason: 'variant_disallowed' },
+      happy: { allowed: 'natural', disallowed: 'conflicts', deniedReason: 'variant_disallowed' },
+      energy: { allowed: 'tradeRoutes', disallowed: 'conflicts', deniedReason: 'variant_disallowed' },
     };
 
     for (const variant of VARIANTS) {
-      const { allowed, disallowed } = cases[variant];
+      const { allowed, disallowed, deniedReason } = cases[variant];
       // Happy's map layers are DeckGL-only; this test isolates variant policy
       // from renderer policy by giving that variant its supported renderer.
       const ctx = makeContext(variant === 'happy'
@@ -532,7 +533,7 @@ describe('WebMCP live dashboard bindings', () => {
       assert.equal(result.ok, true, variant);
       assert.deepEqual(result.targets, [
         { target: allowed, status: 'applied' },
-        { target: disallowed, status: 'denied', reason: 'variant_disallowed' },
+        { target: disallowed, status: 'denied', reason: deniedReason },
       ], variant);
       assert.equal(ctx.mapLayers[allowed], true, variant);
       assert.equal(ctx.mapLayers[disallowed], false, variant);

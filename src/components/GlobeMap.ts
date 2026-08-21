@@ -34,7 +34,6 @@ import {
 } from '@/config/map-layer-definitions';
 import { renderLayerExplanationCard } from '@/utils/layer-explanation-card';
 import { guardOrbitControlsPointerTracking } from '@/utils/orbit-controls-pointer-guard';
-import { getAuthState } from '@/services/auth-state';
 import { resolveTradeRouteSegments, type TradeRouteSegment } from '@/config/trade-routes';
 import { GAMMA_IRRADIATORS } from '@/config/irradiators';
 import { AI_DATA_CENTERS } from '@/config/ai-datacenters';
@@ -75,11 +74,6 @@ import type { RadiationObservation } from '@/services/radiation';
 import type { ScenarioVisualState } from '@/config/scenario-templates';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 import { renderPopupSourceLinks } from './map-popup-source-links';
-import {
-  applyPremiumLayerPresentation,
-  getPremiumLayerPresentation,
-  PremiumLayerGate,
-} from './premium-layer-gate';
 import { globeAltitudeToMapZoom, mapZoomToGlobeAltitude } from '@/utils/globe-zoom';
 
 export interface GlobeMapOptions {
@@ -91,14 +85,6 @@ const SAT_COUNTRY_COLORS: Record<string, string> = { CN: '#ff2020', RU: '#ff8800
 const SAT_TYPE_EMOJI: Record<string, string> = { sar: '\u{1F4E1}', optical: '\u{1F4F7}', military: '\u{1F396}', sigint: '\u{1F4FB}' };
 const SAT_TYPE_LABEL: Record<string, string> = { sar: 'SAR Imaging', optical: 'Optical Imaging', military: 'Military', sigint: 'SIGINT' };
 const SAT_OPERATOR_NAME: Record<string, string> = { CN: 'China', RU: 'Russia', US: 'United States', EU: 'ESA / EU', KR: 'South Korea', IN: 'India', TR: 'Turkey', OTHER: 'Other' };
-
-function saveWebcamMarkerMode(mode: string): void {
-  try {
-    localStorage.setItem('wm-webcam-marker-mode', mode);
-  } catch {
-    // The in-memory marker mode still applies for the current session.
-  }
-}
 // ─── Marker discriminated union ─────────────────────────────────────────────
 interface BaseMarker {
   _kind: string;
@@ -497,8 +483,6 @@ export class GlobeMap {
   private unsubscribeGlobeQuality: (() => void) | null = null;
   private unsubscribeGlobeTexture: (() => void) | null = null;
   private unsubscribeVisualPreset: (() => void) | null = null;
-  private premiumLayerGate: PremiumLayerGate | null = null;
-  private pendingPremiumLayerChanges = new Set<keyof MapLayers>();
   private savedDefaultMaterial: any = null;
   private controls: GlobeControlsLike | null = null;
   private renderPaused = false;
@@ -1985,13 +1969,10 @@ export class GlobeMap {
 
   private createLayerToggles(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'globe');
-    const authState = getAuthState();
     const layers = layerDefs.map(def => ({
       key: def.key,
       label: resolveLayerLabel(def, t),
       icon: def.icon,
-      premium: def.premium,
-      presentation: getPremiumLayerPresentation(def.premium, authState),
     }));
 
     const el = document.createElement('div');
@@ -2005,7 +1986,7 @@ export class GlobeMap {
       </div>
       <input type="text" class="layer-search" placeholder="${t('components.deckgl.layerSearch')}" autocomplete="off" spellcheck="false" />
       <div class="toggle-list" style="max-height:32vh;overflow-y:auto;scrollbar-width:thin;">
-        ${layers.map(({ key, label, icon, presentation }) => {
+        ${layers.map(({ key, label, icon }) => {
             const explainLabel = escapeHtml(`Explain ${label} layer`);
             const hasExplanation = hasCuratedLayerExplanation(key);
             return `
@@ -2013,7 +1994,7 @@ export class GlobeMap {
             <label class="layer-toggle" data-layer="${key}">
               <input type="checkbox" ${this.layers[key] ? 'checked' : ''}>
               <span class="toggle-icon">${icon}</span>
-              <span class="toggle-label">${label}${presentation.enhanced ? ' <span class="layer-pro-badge">PRO</span>' : ''}</span>
+              <span class="toggle-label">${label}</span>
             </label>
             <button type="button" class="layer-explain-btn${hasExplanation ? ' has-layer-explanation' : ''}" data-layer="${key}" aria-label="${explainLabel}" title="${explainLabel}">i</button>
           </div>`;
@@ -2026,12 +2007,6 @@ export class GlobeMap {
     this.container.appendChild(el);
     this.layerTogglesEl = el;
 
-    for (const layer of layers) {
-      if (!layer.premium) continue;
-      const toggle = el.querySelector(`.layer-toggle[data-layer="${layer.key}"]`) as HTMLElement | null;
-      if (toggle) applyPremiumLayerPresentation(toggle, layer.presentation);
-    }
-
     el.querySelectorAll('.layer-toggle input').forEach(input => {
       input.addEventListener('change', () => {
         const layer = (input as HTMLInputElement).closest('.layer-toggle')?.getAttribute('data-layer') as keyof MapLayers | null;
@@ -2041,11 +2016,6 @@ export class GlobeMap {
           this.flushLayerChannels(layer);
           this.onLayerChangeCb?.(layer, checked, 'user');
           this.enforceLayerLimit();
-          // Show/hide webcam marker-mode sub-row when webcam layer is toggled
-          if (layer === 'webcams') {
-            const modeRow = el.querySelector('.webcam-mode-row') as HTMLElement | null;
-            if (modeRow) modeRow.style.display = checked ? '' : 'none';
-          }
         }
       });
     });
@@ -2058,46 +2028,6 @@ export class GlobeMap {
         if (layer) this.showLayerExplanation(layer);
       });
     });
-
-    const lockedPremiumLayerKeys = new Set(
-      layers.filter(layer => layer.premium === 'locked').map(layer => layer.key),
-    );
-    this.premiumLayerGate?.destroy();
-    this.premiumLayerGate = lockedPremiumLayerKeys.size > 0
-      ? new PremiumLayerGate(el, lockedPremiumLayerKeys, {
-          isLayerEnabled: layer => Boolean(this.layers[layer as keyof MapLayers]),
-          onAccessLost: layer => this.handlePremiumLayerAccessLoss(layer as keyof MapLayers),
-        })
-      : null;
-
-    // ── Webcam marker-mode sub-toggle ────────────────────────────────────────
-    const webcamToggleEl = el.querySelector('.layer-toggle[data-layer="webcams"]') as HTMLElement | null;
-    if (webcamToggleEl) {
-      const modeRow = document.createElement('div');
-      modeRow.className = 'webcam-mode-row';
-      modeRow.style.cssText = 'display:none;padding:2px 6px 4px 24px;font-size:calc(10px * var(--wm-panel-effective-scale, 1));color:#aaa;';
-      const currentMode = (): string => this.webcamMarkerMode;
-      const renderModeLabel = (): string => currentMode() === 'emoji' ? '&#128247; icon mode' : '&#128512; emoji mode';
-      const modeBtn = document.createElement('button');
-      modeBtn.style.cssText = 'background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:#00d4ff;font-size:calc(10px * var(--wm-panel-effective-scale, 1));padding:1px 6px;border-radius:3px;cursor:pointer;margin-left:2px;';
-      modeBtn.title = 'Toggle webcam marker style';
-      setTrustedHtml(modeBtn, trustedHtml(renderModeLabel(), "legacy direct innerHTML migration"));
-      modeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const next = currentMode() === 'icon' ? 'emoji' : 'icon';
-        this.webcamMarkerMode = next;
-        saveWebcamMarkerMode(next);
-        setTrustedHtml(modeBtn, trustedHtml(renderModeLabel(), "legacy direct innerHTML migration"));
-        this.flushMarkers();
-      });
-      const modeLabel = document.createElement('span');
-      modeLabel.textContent = 'Marker: ';
-      modeRow.appendChild(modeLabel);
-      modeRow.appendChild(modeBtn);
-      webcamToggleEl.insertAdjacentElement('afterend', modeRow);
-      // Show immediately if webcam layer is already enabled
-      if (this.layers.webcams) modeRow.style.display = '';
-    }
 
     this.enforceLayerLimit();
 
@@ -2123,21 +2053,6 @@ export class GlobeMap {
 
     // The panel usually mounts after the first flush, so replay what that flush withheld.
     this.updateLayerTruncationLabels();
-  }
-
-  private handlePremiumLayerAccessLoss(layer: keyof MapLayers): void {
-    const wasEnabled = Boolean(this.layers[layer]);
-    this.layers[layer] = false;
-    this.flushLayerChannels(layer);
-    if (!wasEnabled) return;
-
-    if (this.onLayerChangeCb) {
-      this.onLayerChangeCb(layer, false, 'programmatic');
-    } else {
-      // GlobeMap builds its controls before MapContainer rehydrates the
-      // callback. Preserve an initial entitlement clamp for that short window.
-      this.pendingPremiumLayerChanges.add(layer);
-    }
   }
 
   private showLayerExplanation(layer: keyof MapLayers): void {
@@ -3228,10 +3143,6 @@ export class GlobeMap {
   public highlightAssets(_assets: any): void {}
   public setOnLayerChange(cb: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void): void {
     this.onLayerChangeCb = cb;
-    if (this.pendingPremiumLayerChanges.size === 0) return;
-    const pending = [...this.pendingPremiumLayerChanges];
-    this.pendingPremiumLayerChanges.clear();
-    for (const layer of pending) cb(layer, false, 'programmatic');
   }
   public setOnTimeRangeChange(_cb: any): void {}
   public hideLayerToggle(layer: keyof MapLayers): void {
@@ -4049,9 +3960,6 @@ export class GlobeMap {
     this.unsubscribeGlobeTexture = null;
     this.unsubscribeVisualPreset?.();
     this.unsubscribeVisualPreset = null;
-    this.premiumLayerGate?.destroy();
-    this.premiumLayerGate = null;
-    this.pendingPremiumLayerChanges.clear();
     // Stop attributing INP events to a globe that is no longer mounted (#5368).
     setGlobeMarkerLoad(null);
     if (this.visibilityHandler) {

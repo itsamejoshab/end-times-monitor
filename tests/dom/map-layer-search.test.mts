@@ -6,13 +6,13 @@ import {
   LAYER_SYNONYMS,
 } from '@/config/map-layer-definitions';
 
-describe('Canada Roads layer discovery', () => {
+describe('mission layer discovery', () => {
   beforeEach(() => {
     document.body.innerHTML = `
       <div id="layer-picker">
         <input class="layer-search" />
         <div class="layer-toggle-row">
-          <label class="layer-toggle" data-layer="canadaRoads">Canada Roads</label>
+          <label class="layer-toggle" data-layer="liveTankers">Live Tanker Positions</label>
         </div>
         <div class="layer-toggle-row">
           <label class="layer-toggle" data-layer="conflicts">Conflict Zones</label>
@@ -21,27 +21,27 @@ describe('Canada Roads layer discovery', () => {
     `;
   });
 
-  it('names Manitoba in the fallback label and jurisdiction synonyms', () => {
-    expect(LAYER_REGISTRY.canadaRoads.fallbackLabel).toContain('Manitoba');
-    expect(LAYER_SYNONYMS.manitoba).toContain('canadaRoads');
+  it('keeps tanker search terms on the retained maritime layer', () => {
+    expect(LAYER_REGISTRY.liveTankers.fallbackLabel).toContain('Tanker');
+    expect(LAYER_SYNONYMS.tanker).toContain('liveTankers');
   });
 
-  it('finds Canada Roads when the picker is searched for Manitoba', () => {
+  it('finds live tankers when the picker is searched for tanker', () => {
     const picker = document.querySelector<HTMLElement>('#layer-picker');
     const search = picker?.querySelector<HTMLInputElement>('.layer-search');
-    const canadaRoads = picker?.querySelector<HTMLElement>('[data-layer="canadaRoads"]')?.closest<HTMLElement>('.layer-toggle-row');
+    const liveTankers = picker?.querySelector<HTMLElement>('[data-layer="liveTankers"]')?.closest<HTMLElement>('.layer-toggle-row');
     const conflicts = picker?.querySelector<HTMLElement>('[data-layer="conflicts"]')?.closest<HTMLElement>('.layer-toggle-row');
 
     expect(picker).not.toBeNull();
     expect(search).not.toBeNull();
-    expect(canadaRoads).not.toBeNull();
+    expect(liveTankers).not.toBeNull();
     expect(conflicts).not.toBeNull();
 
     bindLayerSearch(picker!);
-    search!.value = 'manitoba';
+    search!.value = 'tanker';
     search!.dispatchEvent(new Event('input'));
 
-    expect(canadaRoads!.style.display).toBe('');
+    expect(liveTankers!.style.display).toBe('');
     expect(conflicts!.style.display).toBe('none');
   });
 });
