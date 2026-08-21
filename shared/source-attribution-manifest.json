@@ -12757,6 +12757,23 @@
       ]
     },
     {
+      "host": "www.prophecyupdate.com",
+      "provider": "Tracking Bible Prophecy",
+      "kind": "feed",
+      "observed": true,
+      "license": "Prophecy Update-hosted RSS and linked-publisher terms; verify before public redistribution",
+      "attribution": "Credit Tracking Bible Prophecy as the roundup curator, note Prophecy Update as the feed host, and preserve each linked publisher URL.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "www.radiondekeluka.org",
       "provider": "Radio Ndeke Luka",
       "kind": "feed",

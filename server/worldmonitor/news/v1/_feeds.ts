@@ -3,7 +3,7 @@ export interface ServerFeed {
   url: string;
   lang?: string;
   strategicDefault?: boolean;
-  roundupMode?: 'rapture-ready';
+  roundupMode?: 'rapture-ready' | 'tracking-bible-prophecy';
   /**
    * Positive values start earlier in a cold digest build. This is a fetch
    * scheduling hint only; it does not affect ranking, source tier, or UI
@@ -65,6 +65,11 @@ export const VARIANT_FEEDS: Record<string, Record<string, ServerFeed[]>> = {
         name: 'Rapture Ready',
         url: 'https://www.raptureready.com/feed/',
         roundupMode: 'rapture-ready',
+      },
+      {
+        name: 'Tracking Bible Prophecy',
+        url: 'https://www.prophecyupdate.com/3/feed',
+        roundupMode: 'tracking-bible-prophecy',
       },
     ],
     us: [

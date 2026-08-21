@@ -14,7 +14,10 @@ import { mlWorker } from './ml-worker';
 import { isHeadlineMemoryEnabled } from './ai-flow-settings';
 import { yieldToMain } from '@/utils/after-paint';
 import { createYieldingWorkQueue } from '@/utils/yielding-work-queue';
-import { extractRaptureReadyRoundupItems } from '../../shared/roundup-feed-parser.js';
+import {
+  extractRaptureReadyRoundupItems,
+  extractTrackingBibleProphecyRoundupItems,
+} from '../../shared/roundup-feed-parser.js';
 
 const FEED_COOLDOWN_MS = 5 * 60 * 1000;
 const MAX_FAILURES = 2;
@@ -291,12 +294,15 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
         || '');
     const candidates: FeedCandidate[] = [];
 
-    if (feed.roundupMode === 'rapture-ready' && !isAtom) {
+    if (feed.roundupMode && !isAtom) {
       const roundupNode = sourceNodes.find((item) => {
         const category = item.querySelector('category')?.textContent?.trim() ?? '';
         const title = item.querySelector('title')?.textContent?.trim() ?? '';
-        return category === 'Rapture Ready End Times News'
-          && /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title);
+        if (feed.roundupMode === 'rapture-ready') {
+          return category === 'Rapture Ready End Times News'
+            && /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title);
+        }
+        return /^[A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th),\s+\d{4}$/.test(title);
       });
       if (roundupNode) {
         const encoded = roundupNode.getElementsByTagNameNS(
@@ -306,7 +312,10 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
           || roundupNode.getElementsByTagName('content:encoded')[0]?.textContent
           || '';
         const pubDateStr = publicationDateText(roundupNode);
-        for (const item of extractRaptureReadyRoundupItems(encoded, { maxItems: 5 })) {
+        const roundupItems = feed.roundupMode === 'rapture-ready'
+          ? extractRaptureReadyRoundupItems(encoded, { maxItems: 5 })
+          : extractTrackingBibleProphecyRoundupItems(encoded, { maxItems: 5 });
+        for (const item of roundupItems) {
           candidates.push({ title: item.title, link: item.link, pubDateStr });
         }
       }

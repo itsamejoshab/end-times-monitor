@@ -191,6 +191,12 @@ const PROVIDER_OVERRIDES = {
     attribution: 'Credit Protestia and link to the original article.',
     status: 'terms-review',
   },
+  'www.prophecyupdate.com': {
+    provider: 'Tracking Bible Prophecy',
+    license: 'Prophecy Update-hosted RSS and linked-publisher terms; verify before public redistribution',
+    attribution: 'Credit Tracking Bible Prophecy as the roundup curator, note Prophecy Update as the feed host, and preserve each linked publisher URL.',
+    status: 'terms-review',
+  },
   'www.raptureready.com': {
     provider: 'Rapture Ready',
     license: 'Publisher RSS and website terms; verify before public redistribution',
@@ -787,8 +793,8 @@ const PROVIDER_OVERRIDES = {
 // a provider-bearing override a separate, explicit lifecycle event instead of
 // something `--write` can silently normalize into the manifest.
 export const PROVIDER_IDENTITY_REVIEW = Object.freeze({
-  sha256: 'dd23fc91cced3b3d67f670131d56089a70c4bc10552cb833388402fe5139ec6a',
-  reason: 'Add the reviewed End Times feed provider identities while retaining prior provider identities.',
+  sha256: '93523ba0ae4c1302df317086ef0b0ef9c65ce6d0fe29590d190e5929dff8f171',
+  reason: 'Add the owner-reviewed Tracking Bible Prophecy identity for its Prophecy Update-hosted feed while retaining prior provider identities.',
   // A URL cited here is scanned like any other: this file sits inside
   // SOURCE_ROOTS, so citing a host that is not already a registered source
   // invents a provider row for it. The B.C. catalogue URLs above are safe

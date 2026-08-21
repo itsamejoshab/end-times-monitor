@@ -80,7 +80,7 @@ export interface Feed {
   stateAffiliated?: string;  // e.g., "Russia", "China", "Iran"
   lang?: string;             // ISO 2-letter code for filtering (locale boost)
   strategicDefault?: boolean; // always default-on regardless of UI language
-  roundupMode?: 'rapture-ready'; // expand a dated roundup into linked event items
+  roundupMode?: 'rapture-ready' | 'tracking-bible-prophecy'; // expand a dated roundup into linked event items
 }
 
 export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';

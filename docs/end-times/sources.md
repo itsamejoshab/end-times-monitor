@@ -42,6 +42,18 @@ completion of the terms review in `shared/source-attribution-manifest.json`.
   - Use: the parser exposes the linked event stories rather than the dated
     wrapper. Rapture Ready does not inform doctrine, prophetic fulfillment,
     convergence scoring, or date-setting.
+- **Tracking Bible Prophecy** — `https://www.prophecyupdate.com/3/feed`
+  - Purpose: broad daily roundup of current reporting across conflict,
+    geopolitics, disasters, technology, persecution, and social change.
+  - Provenance: the feed is transported by Prophecy Update, but the roundup
+    originates with and is attributed to
+    [Tracking Bible Prophecy](https://trackingbibleprophecy.org/).
+  - Perspective: conservative Christian prophecy-news selection with a mixed
+    publisher set that includes reporting, partisan outlets, and commentary.
+  - Use: the parser exposes a capped set of linked stories rather than the
+    date-only wrapper. Tracking Bible Prophecy is credited as curator while
+    each item retains the linked publisher URL; selection does not establish
+    doctrine, fulfillment, convergence, or date-setting.
 
 ## Initial exclusions
 

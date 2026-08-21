@@ -1,15 +1,18 @@
 /**
- * Extract linked event stories from Rapture Ready's dated daily-news posts.
+ * Extract linked event stories from dated daily-news roundup posts.
  *
- * The feed's top-level item is only a date. Its content:encoded body contains
- * one paragraph per linked story, with a headline anchor followed by a short
- * excerpt. Keeping this parser pure lets the browser and server ingest paths
- * apply the same conservative rules.
+ * The feeds' top-level items are only dates. Their content:encoded bodies
+ * contain linked headlines, sometimes followed by a short excerpt. Keeping
+ * these parsers pure lets the browser and server ingest paths apply the same
+ * conservative rules.
  */
 
 const PARAGRAPH_RE = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+const LIST_ITEM_RE = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
 const LEADING_LINK_RE =
   /^\s*<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>\s*<br\s*\/?>/i;
+const FIRST_LINK_RE =
+  /<a\b[^>]*\bhref\s*=\s*(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/i;
 const TAG_RE = /<[^>]+>/g;
 const ENTITY_RE = /&(?:#x([0-9a-f]+)|#(\d+)|([a-z][a-z0-9]*));/gi;
 const NAMED_ENTITIES = {
@@ -52,13 +55,15 @@ function cleanText(value) {
     .trim();
 }
 
-function externalHttpUrl(rawHref) {
+function externalHttpUrl(rawHref, excludedHosts) {
   try {
     const url = new URL(String(rawHref).replace(ENTITY_RE, decodeEntity));
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
     if (url.username || url.password) return null;
     const hostname = url.hostname.toLowerCase();
-    if (hostname === 'raptureready.com' || hostname.endsWith('.raptureready.com')) return null;
+    if (excludedHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))) {
+      return null;
+    }
     return url.href;
   } catch {
     return null;
@@ -86,7 +91,7 @@ export function extractRaptureReadyRoundupItems(html, options = {}) {
     const linkMatch = paragraph.match(LEADING_LINK_RE);
     if (!linkMatch) continue;
 
-    const link = externalHttpUrl(linkMatch[2]);
+    const link = externalHttpUrl(linkMatch[2], ['raptureready.com']);
     const title = cleanText(linkMatch[3]);
     if (!link || title.length < 5 || seenLinks.has(link)) continue;
 
@@ -95,6 +100,50 @@ export function extractRaptureReadyRoundupItems(html, options = {}) {
       title,
       link,
       description: cleanText(paragraph.slice(linkMatch[0].length)).slice(
+        0,
+        maxDescriptionLength,
+      ),
+    });
+    if (items.length >= maxItems) break;
+  }
+
+  return items;
+}
+
+/**
+ * @param {unknown} html
+ * @param {{ maxItems?: number, maxDescriptionLength?: number }} [options]
+ * @returns {Array<{ title: string, link: string, description: string }>}
+ */
+export function extractTrackingBibleProphecyRoundupItems(html, options = {}) {
+  const maxItems = Number.isInteger(options.maxItems) && options.maxItems > 0
+    ? options.maxItems
+    : 5;
+  const maxDescriptionLength =
+    Number.isInteger(options.maxDescriptionLength) && options.maxDescriptionLength > 0
+      ? options.maxDescriptionLength
+      : 1_000;
+  const items = [];
+  const seenLinks = new Set();
+
+  for (const listItemMatch of String(html ?? '').matchAll(LIST_ITEM_RE)) {
+    const listItem = listItemMatch[1] ?? '';
+    const linkMatch = listItem.match(FIRST_LINK_RE);
+    if (!linkMatch) continue;
+
+    const link = externalHttpUrl(linkMatch[2], [
+      'prophecyupdate.com',
+      'trackingbibleprophecy.org',
+    ]);
+    const title = cleanText(linkMatch[3]);
+    if (!link || title.length < 5 || seenLinks.has(link)) continue;
+
+    seenLinks.add(link);
+    const descriptionStart = (linkMatch.index ?? 0) + linkMatch[0].length;
+    items.push({
+      title,
+      link,
+      description: cleanText(listItem.slice(descriptionStart)).slice(
         0,
         maxDescriptionLength,
       ),

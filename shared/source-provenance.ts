@@ -128,6 +128,7 @@ export const SOURCE_TYPES: Record<string, SourceType> = {
   // with the project's amillennial framework.
   'Protestia': 'other', 'NYT Terrorism': 'mainstream',
   'End Time Headlines': 'other', 'Rapture Ready': 'other',
+  'Tracking Bible Prophecy': 'other',
 
   // Regional Tech Startups
   'EU Startups': 'tech', 'Tech.eu': 'tech', 'Sifted (Europe)': 'tech',
@@ -363,6 +364,11 @@ export const SOURCE_PROPAGANDA_RISK: Record<string, SourceRiskProfile> = {
     risk: 'medium',
     knownBiases: ['Pre-tribulation dispensational perspective'],
     note: 'Curated linked-news roundup from a secret-rapture perspective; links are discovery evidence only and do not inform doctrine or date-setting',
+  },
+  'Tracking Bible Prophecy': {
+    risk: 'medium',
+    knownBiases: ['Dispensational prophecy-news selection', 'Conservative source mix'],
+    note: 'Daily linked-news roundup hosted by Prophecy Update; attribute curation to Tracking Bible Prophecy and treat linked claims as discovery evidence only',
   },
   // Independent RU exile press — not state media; eligible for EN defaults (#5950)
   'Meduza': { risk: 'low', knownBiases: ['Anti-Kremlin'], note: 'Independent Russian exile outlet (Riga); English + Russian RSS' },

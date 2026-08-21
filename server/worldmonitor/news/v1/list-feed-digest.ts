@@ -50,7 +50,10 @@ import {
   PUBLISHER_FAMILIES,
   publisherFamilyFor,
 } from '../../../../shared/publisher-families.js';
-import { extractRaptureReadyRoundupItems } from '../../../../shared/roundup-feed-parser.js';
+import {
+  extractRaptureReadyRoundupItems,
+  extractTrackingBibleProphecyRoundupItems,
+} from '../../../../shared/roundup-feed-parser.js';
 
 const RSS_ACCEPT = 'application/rss+xml, application/xml, text/xml, */*';
 
@@ -696,17 +699,22 @@ function parseRssXml(xml: string, feed: ServerFeed, variant: string): ParseResul
     }
     const publishedAt = parsedMs;
 
-    if (
+    const isRaptureReadyRoundup =
       feed.roundupMode === 'rapture-ready' &&
-      !isAtom &&
       extractTag(block, 'category') === 'Rapture Ready End Times News' &&
-      /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title)
-    ) {
+      /^\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}$/.test(title);
+    const isTrackingBibleProphecyRoundup =
+      feed.roundupMode === 'tracking-bible-prophecy' &&
+      /^[A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th),\s+\d{4}$/.test(title);
+    if (!isAtom && (isRaptureReadyRoundup || isTrackingBibleProphecyRoundup)) {
       const encoded = extractRawTagBody(block, 'content:encoded');
-      const roundupItems = extractRaptureReadyRoundupItems(encoded, {
+      const parserOptions = {
         maxItems: ITEMS_PER_FEED - items.length,
         maxDescriptionLength: MAX_DESCRIPTION_LEN,
-      });
+      };
+      const roundupItems = isRaptureReadyRoundup
+        ? extractRaptureReadyRoundupItems(encoded, parserOptions)
+        : extractTrackingBibleProphecyRoundupItems(encoded, parserOptions);
       if (roundupItems.length > 0) {
         for (const roundupItem of roundupItems) {
           appendItem({ ...roundupItem, publishedAt });

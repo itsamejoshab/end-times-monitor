@@ -165,6 +165,7 @@ export default [
   "pk.usembassy.gov",
   "pl.usembassy.gov",
   "portfolio.hu",
+  "prophecyupdate.com",
   "protestia.substack.com",
   "pt.euronews.com",
   "radiondekeluka.org",

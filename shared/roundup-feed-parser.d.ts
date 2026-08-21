@@ -13,3 +13,8 @@ export function extractRaptureReadyRoundupItems(
   html: unknown,
   options?: RoundupFeedParserOptions,
 ): RoundupFeedItem[];
+
+export function extractTrackingBibleProphecyRoundupItems(
+  html: unknown,
+  options?: RoundupFeedParserOptions,
+): RoundupFeedItem[];

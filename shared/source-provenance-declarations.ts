@@ -618,6 +618,7 @@ export const CONFIGURED_SOURCE_PROVENANCE_DECLARATIONS: Readonly<
   "Times of Israel": { risk: 'reviewed', type: 'reviewed' },
   "Tom's Hardware": { risk: 'unknown', type: 'unknown' },
   "Toronto Star": { risk: 'reviewed', type: 'reviewed' },
+  "Tracking Bible Prophecy": { risk: 'reviewed', type: 'reviewed' },
   "Trade & Tariffs": { risk: 'unknown', type: 'unknown' },
   "Trade Routes": { risk: 'unknown', type: 'unknown' },
   "Trading Tech": { risk: 'unknown', type: 'unknown' },

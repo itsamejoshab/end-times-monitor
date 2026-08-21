@@ -77,6 +77,11 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
       url: rss('https://www.raptureready.com/feed/'),
       roundupMode: 'rapture-ready',
     },
+    {
+      name: 'Tracking Bible Prophecy',
+      url: rss('https://www.prophecyupdate.com/3/feed'),
+      roundupMode: 'tracking-bible-prophecy',
+    },
   ],
   us: [
     { name: 'Reuters US', url: rss('https://news.google.com/rss/search?q=site:reuters.com+US&hl=en-US&gl=US&ceid=US:en') },
@@ -1511,6 +1516,7 @@ export const END_TIMES_DEFAULT_SOURCES = [
   'NYT Terrorism',
   'End Time Headlines',
   'Rapture Ready',
+  'Tracking Bible Prophecy',
 ] as const;
 
 export const FREE_CAP_PROTECTED_SOURCES = [
