@@ -54,6 +54,12 @@ const STRONG_URL_SEGMENTS = [
 // ("Opinion polls tighten…") is not caught.
 const STRONG_HEADLINE_PREFIX_RE = /^(?:opinion|analysis|commentary|op-?ed|editorial|perspective|viewpoint)\s*:/i;
 
+// Some mixed feeds label opinion in the description rather than the title or
+// URL. Require either parentheses or a colon so ordinary reporting phrases
+// such as "analysis shows" do not become false positives.
+const STRONG_DESCRIPTION_PREFIX_RE =
+  /^\s*(?:\((?:opinion|analysis|commentary|op-?ed|editorial)\)|(?:opinion|analysis|commentary|op-?ed|editorial)\s*:)/i;
+
 // ── STRONG: source-domain allowlist ──────────────────────────────────
 // Publications whose entire output is commentary / analysis. Different
 // signal from STRONG #1: those catch op-ed SECTIONS inside hard-news
@@ -241,7 +247,10 @@ export function classifyOpinion(story) {
   // STRONG #2 — explicit headline prefix.
   if (STRONG_HEADLINE_PREFIX_RE.test(title.trim())) return true;
 
-  // STRONG #3 — source-domain allowlist. Catches commentary-only
+  // STRONG #3 — explicit description prefix from mixed-content feeds.
+  if (STRONG_DESCRIPTION_PREFIX_RE.test(description)) return true;
+
+  // STRONG #4 — source-domain allowlist. Catches commentary-only
   // publishers whose WHOLE SITE is analysis (Bulletin of Atomic
   // Scientists, Project Syndicate, Foreign Affairs, …) — they don't
   // use /opinion/-style URL paths because they have no hard-news

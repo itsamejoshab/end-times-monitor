@@ -20,6 +20,7 @@ export * from '../entities';
 export const DEFAULT_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Map', enabled: true, priority: 1 },
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
+  'end-times': { name: 'End Times Watch', enabled: true, priority: 1 },
   intel: { name: 'Intel Feed', enabled: true, priority: 1 },
   'gdelt-intel': { name: 'Live Intelligence', enabled: true, priority: 1 },
   cii: { name: 'Country Instability', enabled: true, priority: 1 },

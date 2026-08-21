@@ -572,8 +572,13 @@ const HOST_ORIGINS = Object.freeze({
 const PROVIDER_ORIGINS = Object.freeze({
   'B.C. Evacuation Orders and Alerts': 'CA',
   'Ember electricity data': 'GB',
+  'End Time Headlines': 'US',
   'Mexico Energy Regulatory Commission (CRE)': 'MX',
   'Our World in Data': 'GB',
+  'Protestia': 'US',
+  'Rapture Ready': 'US',
+  'The New York Times': 'US',
+  'Tracking Bible Prophecy': 'US',
   'World Health Organization (WHO)': null,
 });
 

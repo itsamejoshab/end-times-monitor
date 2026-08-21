@@ -3437,6 +3437,23 @@
       ]
     },
     {
+      "host": "endtimeheadlines.org",
+      "provider": "End Time Headlines",
+      "kind": "feed",
+      "observed": true,
+      "license": "Publisher RSS and website terms; verify before public redistribution",
+      "attribution": "Credit End Time Headlines and link to the original publisher article.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "energy.ec.europa.eu",
       "provider": "energy.ec.europa.eu",
       "kind": "structured",
@@ -7088,6 +7105,23 @@
       "references": [
         {
           "path": "scripts/seed-fear-greed.mjs"
+        }
+      ]
+    },
+    {
+      "host": "protestia.substack.com",
+      "provider": "Protestia",
+      "kind": "feed",
+      "observed": true,
+      "license": "Publisher/Substack RSS and website terms; verify before public redistribution",
+      "attribution": "Credit Protestia and link to the original article.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
         }
       ]
     },
@@ -12474,6 +12508,23 @@
       ]
     },
     {
+      "host": "www.nytimes.com",
+      "provider": "The New York Times",
+      "kind": "feed",
+      "observed": true,
+      "license": "New York Times RSS and website terms; verify before public redistribution",
+      "attribution": "Credit The New York Times and link to the original article.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "www.occrp.org",
       "provider": "www.occrp.org",
       "kind": "feed",
@@ -12706,6 +12757,23 @@
       ]
     },
     {
+      "host": "www.prophecyupdate.com",
+      "provider": "Tracking Bible Prophecy",
+      "kind": "feed",
+      "observed": true,
+      "license": "Prophecy Update-hosted RSS and linked-publisher terms; verify before public redistribution",
+      "attribution": "Credit Tracking Bible Prophecy as the roundup curator, note Prophecy Update as the feed host, and preserve each linked publisher URL.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
       "host": "www.radiondekeluka.org",
       "provider": "Radio Ndeke Luka",
       "kind": "feed",
@@ -12794,6 +12862,23 @@
       "observed": true,
       "license": "Provider terms for this feed publisher; verify before redistribution",
       "attribution": "Credit www.rappler.com and link to the original feed publisher.",
+      "status": "terms-review",
+      "references": [
+        {
+          "path": "server/worldmonitor/news/v1/_feeds.ts"
+        },
+        {
+          "path": "src/config/feeds.ts"
+        }
+      ]
+    },
+    {
+      "host": "www.raptureready.com",
+      "provider": "Rapture Ready",
+      "kind": "feed",
+      "observed": true,
+      "license": "Publisher RSS and website terms; verify before public redistribution",
+      "attribution": "Credit Rapture Ready as the roundup curator and preserve each linked publisher URL.",
       "status": "terms-review",
       "references": [
         {

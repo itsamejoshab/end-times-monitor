@@ -80,6 +80,7 @@ export const COMMANDS: Command[] = [
 
   // Panel navigation (matching actual DEFAULT_PANELS keys)
   { id: 'panel:live-news', keywords: ['news', 'live news', 'headlines'], label: 'Panel: Live News', icon: '\u{1F4F0}', category: 'panels' },
+  { id: 'panel:end-times', keywords: ['end times', 'prophecy news', 'church watch', 'terrorism'], label: 'Panel: End Times Watch', icon: '\u231B', category: 'panels' },
   { id: 'panel:intel', keywords: ['intel', 'intel feed', 'intelligence', 'osint'], label: 'Panel: Intel Feed', icon: '\u{1F50E}', category: 'panels' },
   { id: 'panel:gdelt-intel', keywords: ['gdelt', 'intelligence feed', 'live intelligence', 'global events'], label: 'Panel: Live Intelligence', icon: '\u{1F50D}', category: 'panels' },
   { id: 'panel:cii', keywords: ['cii', 'instability', 'country risk'], label: 'Panel: Country Instability', icon: '\u{1F3AF}', category: 'panels' },
