@@ -76,7 +76,7 @@ export async function summarizeArticle(
   const isPremium = premiumIdentity.isPremium;
   const { provider, mode = 'brief', geoContext = '', variant = 'full', lang = 'en' } = req;
   const systemAppend = isPremium && typeof req.systemAppend === 'string' ? req.systemAppend : '';
-  const requiresPremium = mode !== 'translate';
+  const requiresPremium = mode !== 'translate' && process.env.LOCAL_API_MODE !== 'docker';
 
   const MAX_HEADLINES = 10;
   const MAX_HEADLINE_LEN = 500;

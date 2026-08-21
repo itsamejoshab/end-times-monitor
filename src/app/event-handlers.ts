@@ -7,15 +7,12 @@ import type {
 import type { UnifiedSettingsConfig } from '@/components/UnifiedSettings';
 import type { AirlineIntelPanel } from '@/components/AirlineIntelPanel';
 import type { CustomWidgetPanel } from '@/components/CustomWidgetPanel';
-import { deleteWidget, getWidget, saveWidget, isProUser, isProTierResolved } from '@/services/widget-store';
+import { deleteWidget, getWidget, saveWidget, isProUser } from '@/services/widget-store';
 import { hasPremiumAccess } from '@/services/panel-gating';
-import {
-  sanitizeLockedLayers,
-  shouldSanitizeLockedLayers,
-} from '@/config/map-layer-definitions';
 import {
   FREE_MAX_PANELS,
   FREE_MAX_SOURCES,
+  RETIRED_PANEL_IDS,
   countFreePanelCapUsage,
   isFreePanelCapCounted,
   userSetPanelEnabled,
@@ -91,7 +88,6 @@ import { dataFreshness } from '@/services/data-freshness';
 import { mlWorker } from '@/services/ml-worker';
 import { WM_OPEN_NOTIFICATIONS_FOR_COUNTRY } from '@/utils/notify-country-link';
 import { AuthLauncher } from '@/components/AuthLauncher';
-import { AuthHeaderWidget } from '@/components/AuthHeaderWidget';
 import { t } from '@/services/i18n';
 import { TvModeController } from '@/services/tv-mode';
 import { getAuthState, subscribeAuthState } from '@/services/auth-state';
@@ -343,6 +339,7 @@ export class EventHandlerManager implements AppModule {
    * so search-add and undo-restore stay in lockstep.
    */
   enablePanelById(panelId: string, options?: { trackAnalytics?: boolean }): boolean {
+    if (RETIRED_PANEL_IDS.has(panelId)) return false;
     const config = this.ctx.panelSettings[panelId];
     if (!config) return false;
     if (config.enabled) return true;
@@ -1003,19 +1000,9 @@ export class EventHandlerManager implements AppModule {
     const kind = this.ctx.map?.isGlobeMode?.()
       ? 'globe'
       : (isDeckGLActive ? 'deck' : 'svg');
-    let filtered = this.filterMissionLayersForAvailableServices(
+    return this.filterMissionLayersForAvailableServices(
       filterMissionLayersForRenderer(layers, kind, this.getMissionDefaultLayers()),
     );
-    // #6045 — mission presets (e.g. Supply-Chain Risk) include resilienceScore.
-    // Free users must not persist or apply locked layers through this path.
-    if (shouldSanitizeLockedLayers(
-      hasPremiumAccess(),
-      isProTierResolved(),
-      this.callbacks.isFreeTierFallbackActive?.() === true,
-    )) {
-      filtered = sanitizeLockedLayers(filtered, false);
-    }
-    return filtered;
   }
 
   private filterMissionLayersForAvailableServices(layers: MapLayers): MapLayers {
@@ -1939,24 +1926,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   setupAuthWidget(): void {
-    const modal = new AuthLauncher();
-    this.ctx.authModal = modal;
-
-    // The standalone gear remains available to every user. Signed-in users
-    // also get explicit Settings and Plan & billing destinations inside the
-    // avatar menu, keeping account and subscription actions in one place.
-    const widget = new AuthHeaderWidget(
-      () => modal.open(),
-      () => this.ctx.unifiedSettings?.open('settings'),
-      () => this.ctx.unifiedSettings?.open('billing'),
-    );
-    this.ctx.authHeaderWidget = widget;
-    const mount = document.getElementById('authWidgetMount');
-    if (mount) {
-      mount.appendChild(widget.getElement());
-    }
-
-    this.mobilePrimaryNav.setupAuth(modal);
+    this.ctx.authModal = new AuthLauncher();
   }
 
   setupPlaybackControl(): void {

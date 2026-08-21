@@ -89,22 +89,13 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
     // Toronto Star join the EN default-on national floor (floors.CA = 3).
     // Remaining names are catalog opt-in. FR sources are locale-boosted only.
     { name: 'Toronto Star', url: rss('https://www.thestar.com/search/?f=rss&t=article&c=news/canada') },
-    { name: 'National Post', url: rss('https://nationalpost.com/feed/') },
-    { name: 'Financial Post', url: rss('https://financialpost.com/feed/') },
-    { name: 'iPolitics', url: rss('https://www.ipolitics.ca/feed') },
     { name: 'The Narwhal', url: rss('https://thenarwhal.ca/feed/') },
     { name: 'The Tyee', url: rss('https://thetyee.ca/rss2.xml') },
     { name: 'Radio-Canada', url: rss('https://ici.radio-canada.ca/info/rss/info/en-continu'), lang: 'fr' },
     { name: 'La Presse', url: rss('https://www.lapresse.ca/actualites/rss'), lang: 'fr' },
     { name: 'Le Devoir', url: rss('https://www.ledevoir.com/rss/manchettes.xml'), lang: 'fr' },
     { name: 'TVA Nouvelles', url: rss('https://www.tvanouvelles.ca/rss.xml'), lang: 'fr' },
-    { name: 'Vancouver Sun', url: rss('https://vancouversun.com/feed/') },
-    { name: 'Calgary Herald', url: rss('https://calgaryherald.com/feed/') },
     { name: 'Winnipeg Free Press', url: rss('https://www.winnipegfreepress.com/feed') },
-    { name: 'Ottawa Citizen', url: rss('https://ottawacitizen.com/feed/') },
-    { name: 'Edmonton Journal', url: rss('https://edmontonjournal.com/feed/') },
-    { name: "Maclean's", url: rss('https://macleans.ca/feed/') },
-    { name: 'The Province', url: rss('https://theprovince.com/feed/') },
     // GNews-only (#6604): no parseable native RSS. CA locale. Do not allowlist publisher hosts.
     { name: 'CTV News', url: rss('https://news.google.com/rss/search?q=site:ctvnews.ca+when:1d&hl=en-CA&gl=CA&ceid=CA:en') },
     { name: 'CP24', url: rss('https://news.google.com/rss/search?q=site:cp24.com+when:1d&hl=en-CA&gl=CA&ceid=CA:en') },
@@ -317,6 +308,7 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
     { name: 'Haaretz', url: rss('https://news.google.com/rss/search?q=site:haaretz.com+when:7d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Jerusalem Post', url: rss('https://www.jpost.com/rss/rssfeedsheadlines.aspx') },
     { name: 'Ynetnews', url: rss('https://www.ynetnews.com/Integration/StoryRss3089.xml') },
+    { name: 'Times of Israel', url: rss('https://news.google.com/rss/search?q=site:timesofisrael.com+when:1d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Arab News', url: rss('https://news.google.com/rss/search?q=site:arabnews.com+when:7d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'The National', url: rss('https://news.google.com/rss/search?q=site:thenationalnews.com+when:2d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Oman Observer', url: rss('https://www.omanobserver.om/rssFeed/1') },
@@ -346,7 +338,6 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
   ],
   ai: [
     { name: 'AI News', url: rss('https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+Google+AI+OR+"large+language+model"+OR+ChatGPT)+when:2d&hl=en-US&gl=US&ceid=US:en') },
-    { name: 'VentureBeat AI', url: rss('https://venturebeat.com/category/ai/feed/') },
     { name: 'The Verge AI', url: rss('https://www.theverge.com/rss/ai-artificial-intelligence/index.xml') },
     { name: 'MIT Tech Review', url: rss('https://www.technologyreview.com/topic/artificial-intelligence/feed') },
     { name: 'ArXiv AI', url: rss('https://export.arxiv.org/rss/cs.AI') },
@@ -359,7 +350,6 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
     { name: 'Reuters Business', url: rss('https://news.google.com/rss/search?q=site:reuters.com+business+markets&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Fox Business', url: rss('https://moxie.foxbusiness.com/google-publisher/latest.xml') },
     { name: 'Business Insider', url: rss('https://www.businessinsider.com/rss') },
-    { name: 'GlobeNewswire', url: rss('https://www.globenewswire.com/RssFeed/subjectcode/22/feedTitle/GlobeNewswire') },
     { name: 'Business Wire', url: rss('https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==') },
     { name: 'PR Newswire', url: rss('https://news.google.com/rss/search?q=site%3Aprnewswire.com%20when%3A1d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Chainwire', url: rss('https://chainwire.org/feed/') },
@@ -415,6 +405,17 @@ export const FULL_FEEDS: Record<string, Feed[]> = {
     { name: 'IAEA', url: rss('https://www.iaea.org/feeds/topnews') },
     { name: 'WHO', url: rss('https://www.who.int/rss-feeds/news-english.xml') },
     { name: 'UNHCR', url: rss('https://news.google.com/rss/search?q=site:unhcr.org+OR+UNHCR+refugees+when:3d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'ReliefWeb', url: rss('https://news.google.com/rss/search?q=site:reliefweb.int+when:3d&hl=en-US&gl=US&ceid=US:en') },
+    // Observational persecution / religious-liberty monitors. The owner-reviewed
+    // church-news doctrinal whitelist is still pending (product-vision.md).
+    { name: 'USCIRF', url: rss('https://news.google.com/rss/search?q=site:uscirf.gov+when:14d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'Open Doors', url: rss('https://news.google.com/rss/search?q=site:opendoors.org+(persecution+OR+"world+watch")+when:14d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'International Christian Concern', url: rss('https://news.google.com/rss/search?q=site:persecution.org+when:14d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'Morning Star News', url: rss('https://news.google.com/rss/search?q=site:morningstarnews.org+when:14d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'Christian Solidarity Worldwide', url: rss('https://news.google.com/rss/search?q=site:csw.org.uk+when:14d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'Religion News Service', url: rss('https://news.google.com/rss/search?q=site:religionnews.com+when:7d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'Coercive Systems Watch', url: rss('https://news.google.com/rss/search?q=(CBDC+OR+"central+bank+digital+currency"+OR+"digital+identity"+OR+"social+credit")+when:3d&hl=en-US&gl=US&ceid=US:en') },
+    { name: 'EFF', url: rss('https://news.google.com/rss/search?q=site:eff.org+when:7d&hl=en-US&gl=US&ceid=US:en') },
   ],
   africa: [
     { name: 'Africa News', url: rss('https://news.google.com/rss/search?q=(Africa+OR+Nigeria+OR+Kenya+OR+"South+Africa"+OR+Ethiopia)+when:2d&hl=en-US&gl=US&ceid=US:en') },
@@ -573,7 +574,6 @@ const TECH_FEEDS: Record<string, Feed[]> = {
   ],
   ai: [
     { name: 'AI News', url: rss('https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+Google+AI+OR+"large+language+model"+OR+ChatGPT+OR+Claude+OR+"AI+model")+when:2d&hl=en-US&gl=US&ceid=US:en') },
-    { name: 'VentureBeat AI', url: rss('https://venturebeat.com/category/ai/feed/') },
     { name: 'The Verge AI', url: rss('https://www.theverge.com/rss/ai-artificial-intelligence/index.xml') },
     { name: 'MIT Tech Review AI', url: rss('https://www.technologyreview.com/topic/artificial-intelligence/feed') },
     { name: 'MIT Research', url: rss('https://news.mit.edu/rss/research') },
@@ -585,7 +585,6 @@ const TECH_FEEDS: Record<string, Feed[]> = {
   ],
   startups: [
     { name: 'TechCrunch Startups', url: rss('https://techcrunch.com/category/startups/feed/') },
-    { name: 'VentureBeat', url: rss('https://venturebeat.com/feed/') },
     { name: 'Crunchbase News', url: rss('https://news.crunchbase.com/feed/') },
     { name: 'SaaStr', url: rss('https://www.saastr.com/feed/') },
     { name: 'AngelList News', url: rss('https://news.google.com/rss/search?q=site:angellist.com+OR+"AngelList"+funding+when:7d&hl=en-US&gl=US&ceid=US:en') },
@@ -796,7 +795,6 @@ const FINANCE_FEEDS: Record<string, Feed[]> = {
     { name: 'Investing.com News', url: rss('https://news.google.com/rss/search?q=site:investing.com+markets+when:1d&hl=en-US&gl=US&ceid=US:en') },
     { name: 'Fox Business', url: rss('https://moxie.foxbusiness.com/google-publisher/latest.xml') },
     { name: 'Business Insider', url: rss('https://www.businessinsider.com/rss') },
-    { name: 'GlobeNewswire', url: rss('https://www.globenewswire.com/RssFeed/subjectcode/22/feedTitle/GlobeNewswire') },
     { name: 'Business Wire', url: rss('https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==') },
     { name: 'PR Newswire', url: rss('https://news.google.com/rss/search?q=site%3Aprnewswire.com%20when%3A1d&hl=en-US&gl=US&ceid=US:en') },
   ],
@@ -1394,25 +1392,16 @@ export const CANADA_ARCTIC_OPT_IN_SOURCES = [
  * Globe/Global stay only in CANADA_ARCTIC_OPT_IN_SOURCES — do not duplicate.
  * Persisted denylist profiles must insert these on first boot after the pack
  * lands — otherwise newly cataloged names are implicitly enabled for every
- * returner. Toronto Star and CTV News stay out so default-on can enable them. National Post is opt-in.
+ * returner. Toronto Star and CTV News stay out so default-on can enable them.
  */
 export const CANADA_DEPTH_OPT_IN_SOURCES = [
-  'National Post',
-  'Financial Post',
-  'iPolitics',
   'The Narwhal',
   'The Tyee',
   'Radio-Canada',
   'La Presse',
   'Le Devoir',
   'TVA Nouvelles',
-  'Vancouver Sun',
-  'Calgary Herald',
   'Winnipeg Free Press',
-  'Ottawa Citizen',
-  'Edmonton Journal',
-  "Maclean's",
-  'The Province',
   'CP24',
   'Montreal Gazette',
 ] as const;
@@ -1578,7 +1567,7 @@ export const DEFAULT_ENABLED_SOURCES: Record<string, string[]> = {
     ...CAUCASUS_EN_DEFAULT_SOURCES,
   ],
 
-  middleeast: ['BBC Middle East', 'Al Jazeera', 'Al Arabiya', 'Guardian ME', 'BBC Persian', 'Iran International', 'IRNA', 'Mehr News', 'Haaretz', 'Jerusalem Post', 'Ynetnews', 'Asharq News', 'The National', 'Yemen Online', 'Syria Direct', '+972 Magazine', 'Naharnet Lebanon', 'Libya Herald', 'Egypt Independent'],
+  middleeast: ['BBC Middle East', 'Al Jazeera', 'Al Arabiya', 'Guardian ME', 'BBC Persian', 'Iran International', 'IRNA', 'Mehr News', 'Haaretz', 'Jerusalem Post', 'Ynetnews', 'Times of Israel', 'Asharq News', 'The National', 'Yemen Online', 'Syria Direct', '+972 Magazine', 'Naharnet Lebanon', 'Libya Herald', 'Egypt Independent'],
   africa: [
     'BBC Africa', 'News24', 'Africanews', 'Jeune Afrique', 'Africa News',
     'Premium Times', 'Channels TV', 'Sahel Crisis',
@@ -1592,12 +1581,12 @@ asia: ['BBC Asia', 'The Diplomat', 'South China Morning Post', 'Reuters Asia', '
     'Amu TV', 'The Daily Star',
   ],
   tech: ['Hacker News', 'Ars Technica', 'The Verge', 'MIT Tech Review'],
-  ai: ['AI News', 'VentureBeat AI', 'The Verge AI', 'MIT Tech Review', 'ArXiv AI'],
+  ai: ['AI News', 'The Verge AI', 'MIT Tech Review', 'ArXiv AI'],
   finance: ['CNBC', 'MarketWatch', 'Yahoo Finance', 'Financial Times', 'Reuters Business'],
   gov: ['White House', 'State Dept', 'Pentagon', 'UN News', 'CISA', 'Treasury', 'DOJ', 'CDC'],
   layoffs: ['Layoffs.fyi', 'TechCrunch Layoffs', 'Layoffs News'],
   thinktanks: ['Foreign Policy', 'Atlantic Council', 'Foreign Affairs', 'CSIS', 'RAND', 'Brookings', 'Carnegie', 'War on the Rocks', 'ISW'],
-  crisis: ['CrisisWatch', 'IAEA', 'WHO', 'UNHCR'],
+  crisis: ['CrisisWatch', 'IAEA', 'WHO', 'UNHCR', 'ReliefWeb', 'USCIRF', 'Open Doors', 'International Christian Concern', 'Coercive Systems Watch'],
   energy: ['Oil & Gas', 'Nuclear Energy', 'Reuters Energy', 'Mining & Resources'],
 };
 

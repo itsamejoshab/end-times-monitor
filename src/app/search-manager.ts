@@ -35,7 +35,7 @@ import { TECH_COMPANIES } from '@/config/tech-companies';
 import { AI_RESEARCH_LABS } from '@/config/ai-research-labs';
 import { STARTUP_ECOSYSTEMS } from '@/config/startup-ecosystems';
 import { TECH_HQS, ACCELERATORS } from '@/config/tech-geo';
-import { STOCK_EXCHANGES, FINANCIAL_CENTERS, CENTRAL_BANKS, COMMODITY_HUBS } from '@/config/finance-geo';
+import { STOCK_EXCHANGES, FINANCIAL_CENTERS, CENTRAL_BANKS } from '@/config/finance-geo';
 import { trackSearchResultSelected, trackCountrySelected } from '@/services/analytics';
 import { t } from '@/services/i18n';
 import { saveToStorage, setTheme } from '@/utils';
@@ -75,9 +75,9 @@ interface FlightSearchItem {
 }
 
 const LAYER_PRESET_PRIMARY_LAYERS: Record<string, (keyof MapLayers)[]> = {
-  military: ['bases', 'flights', 'military'],
-  finance: ['stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', 'economic'],
-  infra: ['cables', 'pipelines', 'datacenters', 'spaceports', 'minerals'],
+  military: ['bases', 'nuclear', 'military', 'gpsJamming'],
+  finance: ['tradeRoutes', 'pipelines', 'sanctions', 'outages'],
+  infra: ['cables', 'pipelines', 'datacenters', 'outages'],
   intel: ['conflicts', 'hotspots', 'protests', 'ucdpEvents', 'displacement'],
   minimal: ['conflicts', 'hotspots'],
 };
@@ -435,27 +435,12 @@ export class SearchManager implements AppModule {
 
     }
 
-    if (getAllowedLayerKeys((SITE_VARIANT || 'full') as MapVariant).has('commodityHubs')) {
-      this.ctx.searchModal.registerSource('commodityhub', COMMODITY_HUBS.map(h => ({
-        id: h.id,
-        title: h.name,
-        subtitle: `${h.type} • ${h.city}, ${h.country}${h.commodities ? ` • ${h.commodities.slice(0, 3).join(', ')}` : ''}`,
-        data: h,
-      })));
-    }
-
     this.ctx.searchModal.registerSource('country', this.buildCountrySearchItems());
 
     this.syncPanelSearchIndex();
-    // Filter CMD+K layer commands by (a) variant-allowed, (b) renderer-kind
-    // compatibility (a deck-only layer can't run on the SVG fallback or the
-    // globe), (c) premium entitlement for locked layers. Without (a)–(b), layer
-    // commands surface where they'd silently fail the variant/renderer guard
-    // (e.g. `layer:storageFacilities` on tech/finance/commodity/happy, or globe
-    // / SVG-mobile). Without (c), free users could enable locked layers like
-    // resilienceScore, leaving a checked+disabled checkbox (#6045).
-    // Currently-on locked layers stay visible so free users can turn them off
-    // if stuck state survived from an older session.
+    // Filter CMD+K layer commands by variant-allowed registry keys and
+    // renderer-kind compatibility. A deck-only layer cannot run on the SVG
+    // fallback or the globe.
     this.ctx.searchModal.setLayerExecutableFn((layerKey) => {
       const key = (LAYER_KEY_MAP[layerKey] || layerKey) as keyof MapLayers;
       if (!(key in this.ctx.mapLayers)) return false;

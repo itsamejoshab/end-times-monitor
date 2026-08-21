@@ -745,8 +745,9 @@ describe('applyMissionPresetToState', () => {
       'counters',
       'spotlight',
     ]);
-    assert.equal(happyApplied.mapLayers.positiveEvents, true);
-    assert.equal(happyApplied.mapLayers.speciesRecovery, true);
+    assert.equal(happyApplied.mapLayers.natural, true);
+    assert.equal(happyApplied.mapLayers.positiveEvents, false);
+    assert.equal(happyApplied.mapLayers.speciesRecovery, false);
 
     const techApplied = applyMissionPresetToState(
       'tech-ai-watch',
@@ -762,7 +763,7 @@ describe('applyMissionPresetToState', () => {
       'startups',
     ]);
     assert.equal(techApplied.mapLayers.datacenters, true);
-    assert.equal(techApplied.mapLayers.startupHubs, true);
+    assert.equal(techApplied.mapLayers.startupHubs, false);
 
     for (const [variant, presetId] of [
       ['tech', 'energy-security'],
@@ -849,7 +850,7 @@ describe('mission preset renderer filtering', () => {
       'energy',
     );
 
-    assert.equal(applied.mapLayers.storageFacilities, true);
+    assert.equal(applied.mapLayers.storageFacilities, false);
     assert.equal(applied.mapLayers.fuelShortages, true);
     assert.equal(applied.mapLayers.liveTankers, true);
 
@@ -883,7 +884,7 @@ describe('mission preset renderer filtering', () => {
       'full',
     );
 
-    assert.equal(applied.mapLayers.resilienceScore, true);
+    assert.equal(applied.mapLayers.resilienceScore, false);
 
     const filtered = filterMissionLayersForRenderer(applied.mapLayers, 'svg', DEFAULT_MAP_LAYERS);
 
@@ -1167,7 +1168,7 @@ describe('mission preset shell integration', () => {
     assert.equal(localStorage.getItem(MISSION_PRESET_STORAGE_KEY), 'supply-chain-risk');
     assert.deepEqual(readJsonStorage<string[]>('panel-order'), callbacks.appliedOrders[0]);
     assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').tradeRoutes, true);
-    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, true);
+    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, false);
     assert.deepEqual(ctx.map.calls.setView.at(-1), { view: 'global', zoom: 2.3 });
     assert.equal(ctx.map.calls.setTimeRange.at(-1), '7d');
     assert.equal(callbacks.waitForAisCalls, 1, 'AIS layer enable should initialize the AIS stream path');
@@ -1218,38 +1219,20 @@ describe('mission preset shell integration', () => {
     assert.equal(callbacks.stopLayerActivity.includes('resilienceScore'), false);
   });
 
-  it('sanitizes locked mission layers only for settled free users or the bounded fallback', () => {
+  it('does not restore inherited non-inventory layers through mission presets', () => {
     setMissionAccess({ premium: false, tierResolved: false });
     const pending = createMissionHarness();
     pending.manager.applyMissionPreset('supply-chain-risk');
-    assert.equal(pending.ctx.mapLayers.resilienceScore, true,
-      'pending auth must preserve a possible Pro user\'s layer state');
-    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, true);
-    assert.equal(pending.ctx.map.calls.setLayers.at(-1)?.resilienceScore, true);
-
-    setMissionAccess({ premium: false, tierResolved: true });
-    const settled = createMissionHarness();
-    settled.manager.applyMissionPreset('supply-chain-risk');
-    assert.equal(settled.ctx.mapLayers.resilienceScore, false,
-      'settled free users must not persist the locked layer');
+    assert.equal(pending.ctx.mapLayers.resilienceScore, false);
     assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, false);
-    assert.equal(settled.ctx.map.calls.setLayers.at(-1)?.resilienceScore, false);
+    assert.equal(pending.ctx.map.calls.setLayers.at(-1)?.resilienceScore, false);
 
-    setMissionAccess({ premium: false, tierResolved: false });
-    const fallback = createMissionHarness({ freeTierFallback: true });
-    fallback.manager.applyMissionPreset('supply-chain-risk');
-    assert.equal(fallback.ctx.mapLayers.resilienceScore, false,
-      'the bounded fallback must heal stale locked state when auth never settles');
-    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, false);
-    assert.equal(fallback.ctx.map.calls.setLayers.at(-1)?.resilienceScore, false);
-
-    setMissionAccess({ premium: true, tierResolved: false });
-    const premium = createMissionHarness({ freeTierFallback: true });
+    setMissionAccess({ premium: true, tierResolved: true });
+    const premium = createMissionHarness();
     premium.manager.applyMissionPreset('supply-chain-risk');
-    assert.equal(premium.ctx.mapLayers.resilienceScore, true,
-      'fallback must not strip a premium user\'s layer');
-    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, true);
-    assert.equal(premium.ctx.map.calls.setLayers.at(-1)?.resilienceScore, true);
+    assert.equal(premium.ctx.mapLayers.resilienceScore, false);
+    assert.equal(premium.ctx.mapLayers.tradeRoutes, true);
+    assert.equal(readJsonStorage<MapLayers>('worldmonitor-layers').resilienceScore, false);
   });
 
   it('filters AIS before persisting a mission preset when AIS is not configured', async () => {

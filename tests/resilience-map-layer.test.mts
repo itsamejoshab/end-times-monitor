@@ -15,18 +15,15 @@ import {
 } from '../src/components/resilience-choropleth-utils';
 
 describe('resilience map layer contracts', () => {
-  it('registers resilience RPCs as premium paths', () => {
+  it('keeps resilience RPCs premium for non-map consumers', () => {
     assert.ok(PREMIUM_RPC_PATHS.has('/api/resilience/v1/get-resilience-score'));
     assert.ok(PREMIUM_RPC_PATHS.has('/api/resilience/v1/get-resilience-ranking'));
   });
 
-  it('registers resilienceScore as a locked deck-only layer in every variant', () => {
-    assert.equal(LAYER_REGISTRY.resilienceScore.renderers.join(','), 'deck');
-    assert.equal(LAYER_REGISTRY.resilienceScore.premium, 'locked');
-    assert.equal('deckGLOnly' in LAYER_REGISTRY.resilienceScore, false);
-
+  it('does not expose the inherited resilience score as a map layer', () => {
+    assert.equal('resilienceScore' in LAYER_REGISTRY, false);
     for (const variant of ['full', 'tech', 'finance', 'happy', 'commodity', 'energy'] as const) {
-      assert.ok(getAllowedLayerKeys(variant).has('resilienceScore'));
+      assert.equal(getAllowedLayerKeys(variant).has('resilienceScore'), false);
     }
   });
 });

@@ -63,7 +63,8 @@ const UNREST_KEYWORDS = [
 
 const FLASHPOINT_KEYWORDS = [
   'iran', 'tehran', 'russia', 'moscow', 'china', 'beijing', 'taiwan', 'ukraine', 'kyiv',
-  'north korea', 'pyongyang', 'israel', 'gaza', 'west bank', 'syria', 'damascus',
+  'north korea', 'pyongyang', 'israel', 'gaza', 'west bank', 'jerusalem', 'temple mount', 'red sea', 'hormuz',
+  'syria', 'damascus',
   'yemen', 'hezbollah', 'hamas', 'kremlin', 'pentagon', 'nato', 'wagner',
 ];
 

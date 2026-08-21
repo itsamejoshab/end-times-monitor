@@ -80,7 +80,7 @@ test('GET fallback publishes generated lifecycle, pricing, and capability facts'
 
   const response = await handler(getRequest());
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('x-product-catalog-source'), 'fallback');
+  assert.equal(response.headers.get('x-product-catalog-source'), 'retired');
 
   const body = await response.json();
   assert.equal(body.product.lifecycle, 'launched');
@@ -89,20 +89,16 @@ test('GET fallback publishes generated lifecycle, pricing, and capability facts'
   assert.equal(body.capabilities.mcpTools, PUBLIC_INVENTORY_FACTS.capabilities.mcpTools);
   assert.equal(body._generated, PUBLIC_PRODUCT_FACTS._generated);
   const proMonthly = PUBLIC_PRODUCT_FACTS.plans.find((plan) => plan.planKey === 'pro_monthly');
-  const proAnnual = PUBLIC_PRODUCT_FACTS.plans.find((plan) => plan.planKey === 'pro_annual');
   assert.ok(body.plans.some((plan) => (
     plan.planKey === 'pro_monthly'
     && plan.price === proMonthly.price
     && plan.billingDuration === 'P1M'
   )));
-  assert.ok(body.tiers.some((tier) => (
-    tier.name === 'Pro'
-    && tier.monthlyPrice === proMonthly.price
-    && tier.annualPrice === proAnnual.price
-  )));
+  assert.deepEqual(body.tiers, []);
+  assert.equal(body.priceSource, 'retired');
 });
 
-test('GET cache cannot override generated public lifecycle and capability facts', async () => {
+test('GET does not serve cached Dodo catalog after retirement', async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({
     result: JSON.stringify({
       product: { lifecycle: 'waitlist', pricingUrl: '/stale' },
@@ -117,7 +113,7 @@ test('GET cache cannot override generated public lifecycle and capability facts'
 
   const response = await handler(getRequest());
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('x-product-catalog-source'), 'cache');
+  assert.equal(response.headers.get('x-product-catalog-source'), 'retired');
 
   const body = await response.json();
   assert.equal(body.product.lifecycle, PUBLIC_PRODUCT_FACTS.product.lifecycle);
@@ -126,5 +122,5 @@ test('GET cache cannot override generated public lifecycle and capability facts'
   assert.deepEqual(body.plans, PUBLIC_PRODUCT_FACTS.plans);
   assert.equal(body.capabilities.mcpTools, PUBLIC_INVENTORY_FACTS.capabilities.mcpTools);
   assert.equal(body._generated, PUBLIC_PRODUCT_FACTS._generated);
-  assert.deepEqual(body.tiers, [{ name: 'Cached tier' }]);
+  assert.deepEqual(body.tiers, []);
 });

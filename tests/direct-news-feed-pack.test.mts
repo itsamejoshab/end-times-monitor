@@ -36,7 +36,6 @@ const DIRECT_PACK = {
   Handelsblatt: { category: 'europe', url: 'https://www.handelsblatt.com/contentexport/feed/schlagzeilen', lang: 'de' },
   Welt: { category: 'europe', url: 'https://www.welt.de/feeds/latest.rss', lang: 'de' },
   Telegraph: { category: 'europe', url: 'https://www.telegraph.co.uk/rss.xml' },
-  GlobeNewswire: { category: 'finance', financeCategory: 'markets', url: 'https://www.globenewswire.com/RssFeed/subjectcode/22/feedTitle/GlobeNewswire' },
   'Business Wire': { category: 'finance', financeCategory: 'markets', url: 'https://feed.businesswire.com/rss/home/?rss=G1QFDERJXkJeGVtRWA==' },
   'U.S. Trade Representative': { category: 'gov', url: 'https://ustr.gov/rss.xml' },
   Chainwire: { category: 'finance', financeCategory: 'crypto', url: 'https://chainwire.org/feed/' },
@@ -57,7 +56,6 @@ const DIRECT_FETCH_HOSTS = [
   'feeds.cms.handelsblatt.com',
   'www.welt.de',
   'www.telegraph.co.uk',
-  'www.globenewswire.com',
   'feed.businesswire.com',
   'ustr.gov',
   'chainwire.org',
@@ -149,7 +147,7 @@ describe('direct licensed news feed pack', () => {
       assert.ok(client.SOURCE_TYPES[name], `${name} missing reviewed source type`);
       assert.ok(client.SOURCE_PROPAGANDA_RISK[name], `${name} missing reviewed risk`);
     }
-    for (const name of ['GlobeNewswire', 'Business Wire', 'PR Newswire', 'Chainwire']) {
+    for (const name of ['Business Wire', 'PR Newswire', 'Chainwire']) {
       assert.equal(client.SOURCE_TYPES[name], 'other', `${name} must not claim independent wire status`);
     }
     assert.equal(publisherFamilyFor('Interfax EN'), publisherFamilyFor('Interfax RU'));

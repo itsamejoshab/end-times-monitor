@@ -217,9 +217,9 @@ function createHarness(variant: Variant, runtime: Runtime): new (ctx: any, callb
     120_000,
     120_000,
     {
-      military: ['bases', 'flights', 'military'],
-      finance: ['stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', 'economic'],
-      infra: ['cables', 'pipelines', 'datacenters', 'spaceports', 'minerals'],
+      military: ['bases', 'military'],
+      finance: ['tradeRoutes', 'pipelines', 'sanctions', 'outages'],
+      infra: ['cables', 'pipelines', 'datacenters', 'outages'],
       intel: ['conflicts', 'hotspots', 'protests', 'ucdpEvents', 'displacement'],
       minimal: ['conflicts', 'hotspots'],
     },
@@ -259,9 +259,9 @@ function createHarness(variant: Variant, runtime: Runtime): new (ctx: any, callb
     isLayerExecutable,
     isLayerEntitled,
     {
-      military: ['bases', 'nuclear', 'flights', 'military', 'waterways'],
-      finance: ['stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', 'economic', 'tradeRoutes'],
-      infra: ['cables', 'pipelines', 'datacenters', 'spaceports', 'minerals'],
+      military: ['bases', 'nuclear', 'military', 'waterways'],
+      finance: ['tradeRoutes', 'pipelines', 'sanctions', 'outages'],
+      infra: ['cables', 'pipelines', 'datacenters', 'outages'],
       intel: ['conflicts', 'hotspots', 'protests', 'ucdpEvents', 'displacement'],
       minimal: ['conflicts', 'hotspots'],
     },
@@ -940,7 +940,7 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
     const scenario = makeScenario([civilian, military]);
     const response = await scenario.manager.searchDashboard('needle', 'all', 10);
     assert.deepEqual(response.results.map((result: { executable: boolean }) => result.executable), [
-      true,
+      false,
       true,
     ]);
 
@@ -979,7 +979,7 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
       ),
     ], 'tech');
     const response = await scenario.manager.searchDashboard('needle', 'all', 10);
-    assert.equal(response.results[0]?.executable, true);
+    assert.equal(response.results[0]?.executable, false);
 
     scenario.state.globe = true;
     assert.deepEqual(await scenario.manager.openSearchResult(response.results[0].key), {
@@ -1190,34 +1190,6 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
         },
       },
       {
-        label: 'finance',
-        variant: 'finance',
-        match: resultMatch(
-          'exchange',
-          'xnas',
-          'Needle exchange',
-          { id: 'xnas', lat: 40.7, lon: -74 },
-        ),
-        verify: ({ calls }) => {
-          assert.ok(calls.layers.includes('stockExchanges'));
-          assert.deepEqual(calls.centers, [[40.7, -74, 4]]);
-        },
-      },
-      {
-        label: 'tech event',
-        variant: 'tech',
-        match: resultMatch(
-          'techevent',
-          'event-1',
-          'Needle tech event',
-          { id: 'event-1', lat: 37.8, lng: -122.4 },
-        ),
-        verify: ({ calls }) => {
-          assert.ok(calls.layers.includes('techEvents'));
-          assert.deepEqual(calls.centers, [[37.8, -122.4, 5]]);
-        },
-      },
-      {
         label: 'command',
         match: commandMatch('time:7d', 'actions', 'Last seven days'),
         verify: ({ calls }) => assert.deepEqual(calls.timeRanges, ['7d']),
@@ -1261,14 +1233,14 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
 
     assert.deepEqual(
       await scenario.manager.openSearchResult(response.results[0].key, async () => {}),
-      { ok: true, status: 'opened', type: 'flight' },
+      { ok: false, status: 'denied', reason: 'result_no_longer_executable' },
     );
     assert.deepEqual(
       await scenario.manager.openSearchResult(response.results[1].key, async () => {}),
       { ok: true, status: 'opened', type: 'flight' },
     );
-    assert.deepEqual(scenario.calls.layers, ['flights', 'military']);
-    assert.deepEqual(scenario.calls.centers, [[1, 2, 9], [3, 4, 9]]);
+    assert.deepEqual(scenario.calls.layers, ['military']);
+    assert.deepEqual(scenario.calls.centers, [[3, 4, 9]]);
   });
 
   it('clears an expired live-flight source before search or selection', () => {
@@ -1535,11 +1507,11 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
     };
     const expected: Record<Variant, string[]> = {
       full: ['country', 'hotspot', 'pipeline'],
-      tech: ['country', 'techcompany'],
-      finance: ['country', 'pipeline', 'exchange', 'commodityhub'],
+      tech: ['country'],
+      finance: ['country', 'pipeline'],
       happy: ['country'],
-      commodity: ['country', 'pipeline', 'commodityhub'],
-      energy: ['country', 'pipeline', 'commodityhub'],
+      commodity: ['country', 'pipeline'],
+      energy: ['country', 'pipeline'],
     };
 
     for (const variant of Object.keys(expected) as Variant[]) {
@@ -1552,10 +1524,10 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
     }
   });
 
-  it('registers commodity hubs through the shared variant-layer policy', () => {
+  it('does not register commodity hubs through a retired map-layer policy', () => {
     const enabledVariants = (['full', 'tech', 'finance', 'happy', 'commodity', 'energy'] as Variant[])
       .filter((variant) => getAllowedLayerKeys(variant).has('commodityHubs'));
-    assert.deepEqual(enabledVariants, ['finance', 'commodity', 'energy']);
+    assert.deepEqual(enabledVariants, []);
 
     let commodityRegistration: ts.CallExpression | undefined;
     const visit = (node: ts.Node): void => {
@@ -1571,15 +1543,7 @@ describe('SearchManager programmatic dashboard search (#6212)', () => {
       ts.forEachChild(node, visit);
     };
     visit(managerNode);
-    assert.ok(commodityRegistration, 'commodityhub source must be registered');
-
-    let parent: ts.Node | undefined = commodityRegistration.parent;
-    while (parent && !ts.isIfStatement(parent)) parent = parent.parent;
-    assert.ok(parent && ts.isIfStatement(parent), 'commodityhub registration must be policy-gated');
-    assert.match(
-      parent.expression.getText(sourceFile),
-      /getAllowedLayerKeys[\s\S]+?\.has\('commodityHubs'\)/,
-    );
+    assert.equal(commodityRegistration, undefined, 'commodityhub search must not depend on a removed map layer');
   });
 
   it('preloads military bases only for variants where base results are visible', () => {

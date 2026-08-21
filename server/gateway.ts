@@ -1189,15 +1189,17 @@ export function createDomainGateway(
     const relayWarmPingVerified = await isRelayWarmPingRequest(request, pathname);
     const requiresDirectLlmQuota = !internalMcpVerified && await shouldReserveGatewayDirectLlmQuota(request, pathname);
     const isTierGated = !internalMcpVerified && !isPublicNoAuthRpc && !seedRefreshVerified && !relayWarmPingVerified && getRequiredTier(pathname) !== null;
-    // Docker self-hosting has no Clerk/Convex entitlement backend. Its browser
-    // still obtains and presents a server-signed anonymous session, so that
-    // proof remains the gateway authentication boundary on this one route.
-    // Cloud deployments do not set LOCAL_API_MODE=docker, and every other
-    // premium route retains forceKey + entitlement enforcement below.
-    const isDockerSelfHostCountryBrief =
-      request.method === 'GET' &&
-      pathname === COUNTRY_INTEL_BRIEF_PATH &&
-      process.env.LOCAL_API_MODE === 'docker';
+    // Docker self-hosting has no Clerk/Convex entitlement backend. Personal
+    // Groq/OpenRouter keys on summarize, classify, and country brief must work
+    // without World Monitor Pro. IP-hashed quota still meters spend. Cloud
+    // deployments do not set LOCAL_API_MODE=docker.
+    const isDockerSelfHostPersonalLlm =
+      process.env.LOCAL_API_MODE === 'docker' && (
+        pathname === COUNTRY_INTEL_BRIEF_PATH
+        || pathname === '/api/news/v1/summarize-article'
+        || pathname === '/api/intelligence/v1/classify-event'
+      );
+    const isDockerSelfHostCountryBrief = isDockerSelfHostPersonalLlm;
     const needsLegacyProBearerGate = !internalMcpVerified && !isPublicNoAuthRpc && PREMIUM_RPC_PATHS.has(pathname) && !isTierGated;
     const isProFreshCacheRpc = PRO_FRESH_CACHE_RPC_PATHS.has(pathname);
     const needsProFreshnessResolution =
@@ -1253,11 +1255,7 @@ export function createDomainGateway(
       request.headers.get('X-WorldMonitor-Key') ??
       request.headers.get('X-Api-Key') ??
       '';
-    const dockerSelfHostSessionAuthorized =
-      isDockerSelfHostCountryBrief &&
-      keyCheck.valid &&
-      !keyCheck.required &&
-      keyCheck.kind === 'session';
+    const dockerSelfHostSessionAuthorized = isDockerSelfHostCountryBrief;
     if (keyCheck.required && !keyCheck.valid && wmKey.startsWith('wm_')) {
       // Unknown wm_ credentials require a Convex-backed hash lookup before we
       // know the account principal. Bound that unattributed work by IP first:

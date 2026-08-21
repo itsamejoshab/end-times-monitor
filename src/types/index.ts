@@ -658,7 +658,8 @@ export interface PanelConfig {
   proGated?: boolean;
 }
 
-export interface MapLayers {
+/** User-visible End Times Monitor map layers. */
+export interface ActiveMapLayers {
   conflicts: boolean;
   bases: boolean;
   cables: boolean;
@@ -666,79 +667,69 @@ export interface MapLayers {
   hotspots: boolean;
   ais: boolean;
   nuclear: boolean;
-  irradiators: boolean;
   radiationWatch?: boolean;
   sanctions: boolean;
   weather: boolean;
-  /** Official Canada road events and conditions from Ontario, Alberta, Toronto, and British Columbia. */
-  canadaRoads: boolean;
-  /** Alberta, B.C., and Saskatchewan province-owned emergency alerts (#6610, #6659). */
-  canadaAlerts: boolean;
-  economic: boolean;
   waterways: boolean;
   outages: boolean;
   cyberThreats: boolean;
   datacenters: boolean;
   protests: boolean;
-  flights: boolean;
   military: boolean;
   natural: boolean;
-  spaceports: boolean;
-  minerals: boolean;
   fires: boolean;
-  // Data source layers
   ucdpEvents: boolean;
   displacement: boolean;
   climate: boolean;
-  // Tech variant layers
-  startupHubs: boolean;
-  cloudRegions: boolean;
-  accelerators: boolean;
-  techHQs: boolean;
-  techEvents: boolean;
-  // Finance variant layers
-  stockExchanges: boolean;
-  financialCenters: boolean;
-  centralBanks: boolean;
-  commodityHubs: boolean;
-  // Gulf FDI layers
-  gulfInvestments: boolean;
-  // Happy variant layers
-  positiveEvents: boolean;
-  kindness: boolean;
-  happiness: boolean;
-  speciesRecovery: boolean;
-  renewableInstallations: boolean;
-  // Trade route layers
   tradeRoutes: boolean;
-  // Iran attacks layer
-  iranAttacks: boolean;
-  // GPS/GNSS interference layer
   gpsJamming: boolean;
-  // Satellite orbital tracking + imagery footprints
   satellites: boolean;
-
-  // CII choropleth layer
   ciiChoropleth: boolean;
-  // Resilience choropleth layer
-  resilienceScore: boolean;
-  // Overlay layers
-  dayNight: boolean;
-  // Commodity variant layers
-  miningSites: boolean;
-  processingPlants: boolean;
-  commodityPorts: boolean;
-  webcams: boolean;
-  // Health layers
   diseaseOutbreaks: boolean;
-  // Energy variant layers (new — optional so existing MapLayers literals
-  // across all other variants remain valid without touching them).
-  storageFacilities?: boolean;
   fuelShortages?: boolean;
   /** Live tanker positions (AIS ship type 80-89) inside chokepoint bboxes.
    *  Refreshed every 60s via getVesselSnapshot. Energy Atlas parity-push. */
   liveTankers?: boolean;
 }
+
+/**
+ * Read-only migration shape for preferences saved by inherited World Monitor
+ * builds. These keys are never executable and are sanitized to false.
+ */
+export interface LegacyMapLayerState {
+  iranAttacks?: boolean;
+  irradiators?: boolean;
+  spaceports?: boolean;
+  flights?: boolean;
+  canadaRoads?: boolean;
+  canadaAlerts?: boolean;
+  economic?: boolean;
+  minerals?: boolean;
+  resilienceScore?: boolean;
+  dayNight?: boolean;
+  startupHubs?: boolean;
+  techHQs?: boolean;
+  accelerators?: boolean;
+  cloudRegions?: boolean;
+  techEvents?: boolean;
+  stockExchanges?: boolean;
+  financialCenters?: boolean;
+  centralBanks?: boolean;
+  commodityHubs?: boolean;
+  gulfInvestments?: boolean;
+  positiveEvents?: boolean;
+  kindness?: boolean;
+  happiness?: boolean;
+  speciesRecovery?: boolean;
+  renewableInstallations?: boolean;
+  miningSites?: boolean;
+  processingPlants?: boolean;
+  commodityPorts?: boolean;
+  storageFacilities?: boolean;
+  webcams?: boolean;
+}
+
+export interface MapLayers extends ActiveMapLayers, LegacyMapLayerState {}
 
 export interface AIDataCenter {
   id: string;

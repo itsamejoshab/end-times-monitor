@@ -19,7 +19,7 @@ import { deriveBillingUxState, getBillingGateOverride, getReactivationHref } fro
 import { getEntitlementState } from './entitlements';
 import { openExternalUrl } from './external-navigation';
 import type { ClientEntitlementBelief } from './premium-denial';
-import { getSecretState } from './runtime-config';
+import { getSecretState, isFeatureEnabled } from './runtime-config';
 import { isProUser } from './widget-store';
 
 export enum PanelGateReason {
@@ -57,6 +57,16 @@ export function hasPremiumAccess(authState?: AuthSession): boolean {
   if (isProUser()) return true;
   if (authState?.user?.role === 'pro') return true;
   return false;
+}
+
+/**
+ * News summarization, classification, and Insights analysis may run on a
+ * personally controlled LLM key (Groq / OpenRouter / Ollama). That is not
+ * World Monitor Pro and must not require a hosted subscription.
+ */
+export function hasLocalNewsLlmAccess(authState?: AuthSession): boolean {
+  if (hasPremiumAccess(authState)) return true;
+  return isFeatureEnabled('aiGroq') || isFeatureEnabled('aiOpenRouter') || isFeatureEnabled('aiOllama');
 }
 
 /**

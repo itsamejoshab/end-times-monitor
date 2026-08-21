@@ -59,12 +59,14 @@ import { t } from '@/services/i18n';
 import type { ScenarioVisualState } from '@/config/scenario-templates';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 import {
+  getLayersForVariant,
   getLayerExplanation,
   hasCuratedLayerExplanation,
   isLayerExecutable,
-  isSunsetLayer,
   LAYER_REGISTRY,
   resolveLayerLabel,
+  type MapLayerKey,
+  type MapVariant,
 } from '@/config/map-layer-definitions';
 import { renderLayerExplanationCard } from '@/utils/layer-explanation-card';
 import {
@@ -481,7 +483,7 @@ export class MapComponent {
     // Labels are renderer-independent, so resolve straight from the registry.
     // (The old `getLayersForVariant(v, 'flat')` lookup dropped ciiChoropleth
     // once it stopped being an SVG layer, regressing its label to the raw key.)
-    const def = LAYER_REGISTRY[layer];
+    const def = LAYER_REGISTRY[layer as MapLayerKey];
     return def ? resolveLayerLabel(def, t) : String(layer);
   }
 
@@ -490,63 +492,10 @@ export class MapComponent {
     toggles.className = 'layer-toggles';
     toggles.id = 'layerToggles';
 
-    // Variant-aware layer buttons
-    const fullLayers: (keyof MapLayers)[] = [
-      'iranAttacks',                                      // Iran conflict
-      'conflicts', 'hotspots', 'sanctions', 'protests',  // geopolitical
-      'bases', 'nuclear', 'irradiators',                 // military/strategic
-      'military',                                         // military tracking (flights + vessels)
-      'cables', 'pipelines', 'outages', 'datacenters',   // infrastructure
-      // cyberThreats is intentionally hidden on SVG/mobile fallback (DeckGL desktop only).
-      // storageFacilities + fuelShortages are also DeckGL-only — this file has no
-      // SVG render path for them (see grep for existing 'pipelines' render at :1100).
-      // Adding them here would surface a toggle that produces zero output. They're
-      // already restricted to renderers: ['deck'] in LAYER_REGISTRY, which keeps
-      // them out of the globe picker too.
-      'ais', 'flights', 'gpsJamming',                      // transport/interference
-      'natural', 'weather',                               // natural
-      'economic',                                         // economic
-      'waterways',                                        // labels
-      'ciiChoropleth',                                    // Candidate only; SVG capability filter below omits it.
-    ];
-    const techLayers: (keyof MapLayers)[] = [
-      'cables', 'datacenters', 'outages',                // tech infrastructure
-      'startupHubs', 'cloudRegions', 'accelerators', 'techHQs', 'techEvents', // tech ecosystem
-      'natural', 'weather',                               // natural events
-      'economic',                                         // economic/geographic
-    ];
-    const financeLayers: (keyof MapLayers)[] = [
-      'stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', // finance ecosystem
-      'cables', 'pipelines', 'outages',                   // infrastructure
-      'sanctions', 'economic', 'waterways',               // geopolitical/economic
-      'natural', 'weather',                               // natural events
-    ];
-    const happyLayers: (keyof MapLayers)[] = [
-      'positiveEvents', 'kindness', 'happiness', 'speciesRecovery', 'renewableInstallations',
-    ];
-    // Energy variant — SVG/mobile fallback. Only include keys that actually render
-    // in this file (commodityPorts/climate/tradeRoutes/resilienceScore/dayNight do
-    // not, so they're omitted). Mirrors VARIANT_LAYER_ORDER.energy in
-    // src/config/map-layer-definitions.ts but filtered to the SVG-capable subset.
-    const energyLayers: (keyof MapLayers)[] = [
-      'pipelines',                            // oil + gas pipeline registry (Week 2)
-      'waterways',                            // strategic chokepoints
-      'ais',                                  // tanker positions at chokepoints
-      'commodityHubs',                        // energy exchanges / hubs
-      'minerals',                             // critical-minerals + energy-transition overlap
-      'sanctions',                            // energy sanctions flows
-      'outages',                              // power / energy system status
-      'natural',                              // earthquakes near energy infrastructure
-      'weather', 'fires',                     // operational risk
-      'economic',                             // infrastructure context
-    ];
-    // Filter sunset and renderer-incompatible layers so the SVG/mobile picker
-    // cannot expose a toggle whose layer has no SVG paint path.
-    const layers = (SITE_VARIANT === 'tech' ? techLayers
-                 : SITE_VARIANT === 'finance' ? financeLayers
-                 : SITE_VARIANT === 'happy' ? happyLayers
-                 : SITE_VARIANT === 'energy' ? energyLayers
-                 : fullLayers).filter((key) => !isSunsetLayer(key) && isLayerExecutable(key, 'svg'));
+    const layers = getLayersForVariant(
+      (SITE_VARIANT || 'full') as MapVariant,
+      'svg',
+    ).map(({ key }) => key).filter((key) => isLayerExecutable(key, 'svg'));
     const MAX_SVG_LAYERS = 9;
     const enforceLayerLimit = () => {
       const allBtns = Array.from(toggles.querySelectorAll<HTMLButtonElement>('.layer-toggle'));

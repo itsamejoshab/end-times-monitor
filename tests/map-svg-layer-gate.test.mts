@@ -80,8 +80,8 @@ function makeMap(initialLayers: Partial<MapLayers> = {}) {
   return { map, changes };
 }
 
-describe('SVG map premium layer toggle gate (#6045)', () => {
-  it('blocks free activation but preserves stale locked-layer off-ramp', () => {
+describe('SVG map layer toggle gate', () => {
+  it('does not enable inherited non-inventory layers', () => {
     tier.premium = false;
     const fresh = makeMap();
     fresh.map.toggleLayer('resilienceScore');
@@ -90,18 +90,18 @@ describe('SVG map premium layer toggle gate (#6045)', () => {
 
     const stale = makeMap({ resilienceScore: true });
     stale.map.toggleLayer('resilienceScore');
-    assert.equal(stale.map.state.layers.resilienceScore, false);
-    assert.deepEqual(stale.changes, [['resilienceScore', false, 'user']]);
+    assert.equal(stale.map.state.layers.resilienceScore, true);
+    assert.deepEqual(stale.changes, []);
   });
 
-  it('keeps enhanced layers available to free users', () => {
+  it('keeps mission layers available without a subscription', () => {
     tier.premium = false;
     const map = makeMap();
     map.map.toggleLayer('ciiChoropleth');
     assert.equal(map.map.state.layers.ciiChoropleth, true);
   });
 
-  it('gates programmatic enableLayer with the same policy', () => {
+  it('gates programmatic enableLayer with the same inventory policy', () => {
     tier.premium = false;
     const free = makeMap();
     free.map.enableLayer('resilienceScore');
@@ -110,7 +110,7 @@ describe('SVG map premium layer toggle gate (#6045)', () => {
     tier.premium = true;
     const premium = makeMap();
     premium.map.enableLayer('resilienceScore');
-    assert.equal(premium.map.state.layers.resilienceScore, true);
+    assert.equal(premium.map.state.layers.resilienceScore, false);
   });
 });
 
@@ -125,7 +125,7 @@ describe('SVG map layer picker capability gate', () => {
 
     assert.match(
       pickerSrc,
-      /\.filter\(\(key\) => !isSunsetLayer\(key\) && isLayerExecutable\(key, 'svg'\)\);[\s\S]*?layers\.forEach/,
+      /getLayersForVariant\([\s\S]*?'svg'[\s\S]*?\.filter\(\(key\) => isLayerExecutable\(key, 'svg'\)\)/,
       'SVG picker candidates must pass the registry capability gate before buttons are rendered',
     );
   });

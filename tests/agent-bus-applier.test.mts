@@ -242,15 +242,15 @@ describe('agent bus applier', () => {
       result.targets.map((target) => [target.target, target.status, target.reason ?? '']),
       [
         ['conflicts', 'applied', ''],
-        ['resilienceScore', 'denied', 'layer_not_entitled'],
-        ['storageFacilities', 'denied', 'layer_not_executable'],
+        ['resilienceScore', 'denied', 'unknown_layer'],
+        ['storageFacilities', 'denied', 'unknown_layer'],
         ['notARealLayer', 'denied', 'unknown_layer'],
       ],
     );
   });
 
-  it('allows free enhanced layers and clears stale locked layers', () => {
-    // DeckGL-active context (kind 'deck'): the enhanced CII choropleth renders
+  it('allows free enhanced layers', () => {
+    // DeckGL-active context (kind 'deck'): the CII choropleth renders
     // on deck + globe, so it must be executable here. The default makeCtx mock
     // models the SVG fallback (kind 'svg'), where CII has no paint path.
     const ctx = makeCtx({
@@ -262,11 +262,10 @@ describe('agent bus applier', () => {
         isGlobeMode: () => false,
       } as never,
     });
-    ctx.mapLayers.resilienceScore = true;
     const layerChanges: Array<[keyof MapLayers, boolean, 'programmatic']> = [];
     const result = applyAgentBusAction(ctx, {
       type: 'set_layers',
-      layers: { ciiChoropleth: true, resilienceScore: false },
+      layers: { ciiChoropleth: true },
     }, {
       ...entitled,
       applyLayerChange: (layer, enabled, source) => { layerChanges.push([layer, enabled, source]); },
@@ -274,12 +273,9 @@ describe('agent bus applier', () => {
 
     assert.equal(result.ok, true);
     assert.equal(ctx.mapLayers.ciiChoropleth, true,
-      'enhanced layers remain available to free users');
-    assert.equal(ctx.mapLayers.resilienceScore, false,
-      'free users must be able to clear stale locked state');
+      'CII remains available without a subscription');
     assert.deepEqual(layerChanges, [
       ['ciiChoropleth', true, 'programmatic'],
-      ['resilienceScore', false, 'programmatic'],
     ]);
   });
 
@@ -319,7 +315,7 @@ describe('agent bus applier', () => {
     assert.equal(mapCalls.setLayersCalls.length, 0);
   });
 
-  it('rejects resilienceScore outside DeckGL even for premium users', () => {
+  it('rejects inherited non-inventory layers even for premium users', () => {
     const ctx = makeCtx();
     const result = applyAgentBusAction(ctx, {
       type: 'set_layers',
@@ -329,76 +325,8 @@ describe('agent bus applier', () => {
 
     assert.equal(result.ok, false);
     assert.equal(result.reason, 'no_allowed_layers');
-    assert.equal(result.targets[0]?.reason, 'layer_not_executable');
+    assert.equal(result.targets[0]?.reason, 'unknown_layer');
     assert.equal(ctx.mapLayers.resilienceScore, false);
     assert.equal(mapCalls.setLayersCalls.length, 0);
-  });
-
-  it('normalizes mutually exclusive choropleth layers before applying', () => {
-    const layerChanges: Array<[keyof MapLayers, boolean, 'programmatic']> = [];
-    const ctx = makeCtx({
-      map: {
-        setCenter: () => {},
-        setView: () => {},
-        setLayers: () => {},
-        isDeckGLActive: () => true,
-        isGlobeMode: () => false,
-      } as never,
-    });
-    ctx.mapLayers.ciiChoropleth = true;
-
-    const result = applyAgentBusAction(ctx, {
-      type: 'set_layers',
-      layers: { resilienceScore: true },
-    }, {
-      ...entitled,
-      hasPremiumAccess: () => true,
-      applyLayerChange: (layer, enabled, source) => { layerChanges.push([layer, enabled, source]); },
-    });
-
-    assert.equal(result.ok, true);
-    assert.equal(ctx.mapLayers.resilienceScore, true);
-    assert.equal(ctx.mapLayers.ciiChoropleth, false);
-    assert.deepEqual(layerChanges, [
-      ['ciiChoropleth', false, 'programmatic'],
-      ['resilienceScore', true, 'programmatic'],
-    ]);
-  });
-
-  it('reports a normalized-off requested choropleth as an exclusive conflict', () => {
-    const layerChanges: Array<[keyof MapLayers, boolean, 'programmatic']> = [];
-    const ctx = makeCtx({
-      map: {
-        setCenter: () => {},
-        setView: () => {},
-        setLayers: () => {},
-        isDeckGLActive: () => true,
-        isGlobeMode: () => false,
-      } as never,
-    });
-
-    const result = applyAgentBusAction(ctx, {
-      type: 'set_layers',
-      layers: { ciiChoropleth: true, resilienceScore: true },
-    }, {
-      ...entitled,
-      hasPremiumAccess: () => true,
-      applyLayerChange: (layer, enabled, source) => { layerChanges.push([layer, enabled, source]); },
-    });
-
-    assert.equal(result.ok, true);
-    assert.equal(ctx.mapLayers.ciiChoropleth, true);
-    assert.equal(ctx.mapLayers.resilienceScore, false);
-    assert.deepEqual(result.targets, [
-      { target: 'ciiChoropleth', status: 'applied' },
-      {
-        target: 'resilienceScore',
-        status: 'denied',
-        reason: 'exclusive_layer_conflict',
-      },
-    ]);
-    assert.deepEqual(layerChanges, [
-      ['ciiChoropleth', true, 'programmatic'],
-    ]);
   });
 });

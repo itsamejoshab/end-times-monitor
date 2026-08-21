@@ -30,22 +30,15 @@ const CANADA_ARCTIC_OPT_INS = [
   'Arctic Today',
 ] as const;
 const CANADA_DEPTH_OPT_INS = [
-  'National Post',
-  'Financial Post',
-  'iPolitics',
   'The Narwhal',
   'The Tyee',
-  "Maclean's",
   'Radio-Canada',
   'La Presse',
   'Le Devoir',
   'TVA Nouvelles',
-  'Vancouver Sun',
-  'Calgary Herald',
   'Winnipeg Free Press',
-  'Edmonton Journal',
-  'Ottawa Citizen',
-  'The Province',
+  'CP24',
+  'Montreal Gazette',
 ] as const;
 const CRISIS_DESK_OPT_INS = [
   "Sana'a Center",
@@ -469,13 +462,13 @@ describe('cloud-prefs schema-6 migration: Canada/Arctic opt-in boundary', () => 
 describe('cloud-prefs schema-7 migration: Canada depth opt-in boundary', () => {
   it('adds each companion source once while preserving the existing order', () => {
     const blob = {
-      'worldmonitor-disabled-feeds': JSON.stringify(['user-choice', 'National Post']),
+      'worldmonitor-disabled-feeds': JSON.stringify(['user-choice', 'The Narwhal']),
       'worldmonitor-panels': '{"keep":true}',
     };
     const result = migrateCanadaDepthOptInsV7(blob, CANADA_DEPTH_OPT_INS);
     assert.deepEqual(
       JSON.parse(result['worldmonitor-disabled-feeds'] as string),
-      ['user-choice', 'National Post', ...CANADA_DEPTH_OPT_INS.filter((n) => n !== 'National Post')],
+      ['user-choice', 'The Narwhal', ...CANADA_DEPTH_OPT_INS.filter((n) => n !== 'The Narwhal')],
     );
     assert.equal(result['worldmonitor-panels'], '{"keep":true}');
     assert.equal(
